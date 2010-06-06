@@ -2,5 +2,15 @@ This is a python program to turn your Delcom Engineering USB Numeric Display
 (USB ID 0fc5:1227) into a clock.
 
 http://www.delcomproducts.com/products_USBNDisplay.asp
-http://git.kernel.org/?p=linux/kernel/git/stable/linux-2.6.32.y.git;a=blob;f=drivers/usb/misc/usbsevseg.c;h=3db255537e7913d2de5d0b03781fc20768af2a91;hb=HEAD
+http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=blob;f=drivers/usb/misc/usbsevseg.c;
 
+I would like delcom-clock to exit as soon as the device is unplugged. I don't
+know how to do this. I only seem to be able to find out that the device
+has been removed when I write to it. Polling on the device does seem to give
+me a wakeup when the device is removed. This is why delcom-clock continues
+to write to the device even when it is off.
+
+Delcom-clock should use raw mode so that it can show space characters rather
+than hyphens.
+
+Tested with kernel 2.6.32-3-amd64
