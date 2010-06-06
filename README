@@ -16,3 +16,5 @@ than hyphens.
 I have not tested this with a six digit display because I don't have one.
 
 Tested with kernel 2.6.32-3-amd64
+
+This program can be found on http://github.com/stuart12/delcom-clock

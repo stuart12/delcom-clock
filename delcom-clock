@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # A program to control a Delcom Engineering USB Numeric Display (USB ID 0fc5:1227)
 # http://www.delcomproducts.com/products_USBNDisplay.asp
-# 16 March 2010, Copyright 2010 Stuart Pook http://www.pook.it/
+# 6 June 2010, Copyright 2010 Stuart Pook http://www.pook.it/
+# Tested on Python 2.5.5
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -63,7 +64,7 @@ for o, a in opts:
 		print "bad option", o
 		usage()
 
-device=args[0]
+device = args[0]
 debug == None or debug.write("device " + device + "\n")
 def message(debug, mess):
 	if debug != None:
@@ -74,9 +75,7 @@ poller = select.poll()
 if control != None:
 	if not os.path.exists(control):
 		os.mkfifo(control,  0600)
-		os.chown(control,  1000,  -1)
-#	message(debug, "open for write " + control)
-	message(debug, "open for read " + control)
+	message(debug, "opening for read " + control)
 	control_fd = os.open(control,  os.O_RDONLY | os.O_NONBLOCK)
 	if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
 		sys.exit(control + " is not a pipe");
@@ -107,9 +106,7 @@ def set_parameter(device, file, value, debug):
 	f.close()
 	message(debug, "set " + name + " to " + value)
 	
-powered = open(os.path.join(device, "powered"), "w", buffering=0)
-	
-powered.write("1\n");
+set_parameter(device, "powered", "1", debug)
 set_parameter(device, "mode_msb", "8", debug)
 set_parameter(device, "mode_lsb", "255", debug)
 set_parameter(device, "textmode", "ascii", debug)
@@ -138,10 +135,9 @@ while True:
 	text.write(out + '\n')
 	# this line is the hardest to get right
 	delay = update - now % 60 % update
-#	time.sleep(delay)
 	rdelay =  int(math.ceil(delay * 1000))
 	if rdelay < command_gap + 1:
-		print "rdelay too small ",  rdelay
+		message(debug, "rdelay too small " + str(rdelay))
 		rdelay = command_gap
 	message(debug, '[' + out + "] delay=" + str(delay) + " " + str(now) + " " + str(localtime.tm_sec) + ' ' + str(now % 60) + " " + str(rdelay))
 	read = poller.poll(rdelay)
@@ -163,5 +159,3 @@ while True:
 				decimals.write("\n")
 			message(debug, "powered " + str(on))
 			time.sleep(command_gap / 1000.0)
-
-sys.exit(0)

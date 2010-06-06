@@ -15,7 +15,7 @@ ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
 
 ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
 	KERNEL=="1-[0-9].[0-9]:1.0", \
-	RUN += "/usr/local/lib/delcom-clock --control /var/run/led-bedroom--fork --format '%%w%%d %%k%%M' --decimals 10000100 --update 60 /sys/$devpath"
+	RUN += "/usr/local/lib/delcom-clock --control /var/run/led-bedroom --fork --format '%%w%%d %%k%%M' --decimals 10000100 --update 60 /sys/$devpath"
 
 # directly plugged into the computer
 ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
