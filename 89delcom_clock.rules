@@ -1,0 +1,27 @@
+# Delcom Engineering, USB Numeric Display
+# Stuart Pook http://www.pook.it/ 16 March 2010
+# this file should be called /etc/udev/rules.d/89delcom_clock.rules and will cause udev
+# the start delcom-clock as soon as you plug in a display
+
+# if you only have one device or you want them all to have the same display
+# you will not need the KERNEL lines
+
+# This file was written for udev 151-3 un Debian unstable.
+
+# plugged into a hub
+ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
+	KERNEL=="2-[0-9].[0-9]:1.0", \
+	RUN += "/usr/local/lib/delcom-clock --fork --format '%%d  %%H%%M' --decimals 0100 --update 60 /sys/$devpath"
+
+ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
+	KERNEL=="1-[0-9].[0-9]:1.0", \
+	RUN += "/usr/local/lib/delcom-clock --control /var/run/led-bedroom--fork --format '%%w%%d %%k%%M' --decimals 10000100 --update 60 /sys/$devpath"
+
+# directly plugged into the computer
+ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
+	KERNEL=="[0-9]-[0-9]:1.0", \
+	RUN+="/usr/local/lib/delcom-clock --fork /sys/$devpath"
+
+#RUN += "/bin/bash -c 'echo /sys/$devpath $major $minor r=$result i=$id n=$number k=$kernel p=$parent r=$root >> /tmp/udev.txt'"
+
+# the next step is to fix the modes on the device files as they should not be 0666
