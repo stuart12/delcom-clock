@@ -1,20 +1,24 @@
 This is a python program to turn your Delcom Engineering USB Numeric Display
 (USB ID 0fc5:1227) into a clock.
 
-http://www.delcomproducts.com/products_USBNDisplay.asp
-http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=blob;f=drivers/usb/misc/usbsevseg.c;
+You can turn the clock on and off using a named pipe (see the --control option).
 
-I would like delcom-clock to exit as soon as the device is unplugged. I don't
-know how to do this. I only seem to be able to find out that the device
-has been removed when I write to it. Polling on the device does seem to give
-me a wakeup when the device is removed. This is why delcom-clock continues
-to write to the device even when it is off.
+http://www.delcomproducts.com/products_USBNDisplay.asp
+http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=blob;f=drivers/usb/misc/usbsevseg.c
+
+I would like delcom-clock to exit as soon as the device is unplugged. I
+don't know how to do this. I only seem to be able to find out that the
+device has been removed when I write to it. Polling on the device does
+not seem to give me a wakeup when the device is removed. This is why
+delcom-clock continues to write to the device even when it is off.
 
 Delcom-clock should use raw mode so that it can show space characters rather
 than hyphens.
 
 I have not tested this with a six digit display because I don't have one.
 
-Tested with kernel 2.6.32-3-amd64
+Tested with Debian Linux kernel 2.6.32-3-amd64
 
-This program can be found on http://github.com/stuart12/delcom-clock
+This program can be found at http://github.com/stuart12/delcom-clock
+
+Thanks to Harrison Metzger for the kernel driver for this device.
