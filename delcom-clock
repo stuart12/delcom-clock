@@ -1,0 +1,112 @@
+#!/usr/bin/python
+# 16 March 2010, Copyright 2010 Stuart Pook http://www.pook.it/
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import os.path
+import sys
+import getopt
+import time
+
+myname = os.path.basename(sys.argv[0])
+verbose = False
+seconds = False
+fork = False
+options = [ "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
+decimals = "10100"
+format = "%H%M%S"
+update = 1
+debug = None
+def usage():
+	sys.exit("usage: " + myname + " " + str(options))
+try:
+	opts, args = getopt.getopt(sys.argv[1:], "v", options)
+except getopt.GetoptError:
+	print "help"
+	usage()
+for o, a in opts:
+	if o in ("--fork"):
+		fork = True
+	elif o in ("--decimals"):
+		decimals = a
+	elif o in ("--format"):
+		format = a
+	elif o in ("--debug"):
+		debug = open(a, "w")
+	elif o in ("--update"):
+		update = int(a)
+	elif o in ("-v", "--verbose"):
+		debug = open("/dev/stdout", "w")
+	elif o in ("--noverbose"):
+		debug = None
+	else:
+		print "bad option", o
+		usage()
+
+device=args[0]
+debug == None or debug.write("device " + device + "\n")
+def message(debug, mess):
+	if debug != None:
+		debug.write(mess + "\n")
+		debug.flush()
+	
+level = os.path.join(device, "../power/level")
+power = open(level)
+power_required = "auto\n"
+old_power = power.readline()
+power.close()
+if old_power != power_required:
+	message(debug, "power was " + old_power)
+	power = open(level, "w")
+	power.write(power_required)
+	power.close()
+	time.sleep(5.0) # magic delay value
+
+def set_parameter(device, file, value, debug):
+	name = os.path.join(device, file)
+	f = open(name, "w")
+	f.write(value + "\n")
+	f.close()
+	message(debug, "set " + name + " to " + value)
+
+set_parameter(device, "powered", "1", debug)
+set_parameter(device, "mode_msb", "8", debug)
+set_parameter(device, "mode_lsb", "255", debug)
+set_parameter(device, "textmode", "ascii", debug)
+
+text = open(os.path.join(device, "text"), "w")
+
+text.write("888888\n")
+text.flush()
+set_parameter(device, "decimals", decimals, debug)
+time.sleep(1.0)
+
+if fork and os.fork() != 0:
+	sys.exit(0)
+
+message(debug, "starting " + format + " " + str(update))
+
+while True:
+	now = time.time()
+	localtime = time.localtime(now)
+	out = time.strftime(format, localtime)
+	text.write(out + '\n')
+	# this line is the hardest to get right
+	delay = update - now % 60 % update
+	text.flush()
+	message(debug, '[' + out + "] " + str(delay) + " " + str(now) + " " + str(localtime.tm_sec) + ' ' + str(now % 60))
+	time.sleep(delay)
+
+sys.exit(0)

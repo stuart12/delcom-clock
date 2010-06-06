@@ -1,0 +1,6 @@
+This is a program to turn your Delcom Engineering USB Numeric Display
+(USB ID 0fc5:1227) into a clock.
+
+http://www.delcomproducts.com/products_USBNDisplay.asp
+http://git.kernel.org/?p=linux/kernel/git/stable/linux-2.6.32.y.git;a=blob;f=drivers/usb/misc/usbsevseg.c;h=3db255537e7913d2de5d0b03781fc20768af2a91;hb=HEAD
+
