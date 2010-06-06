@@ -13,4 +13,6 @@ to write to the device even when it is off.
 Delcom-clock should use raw mode so that it can show space characters rather
 than hyphens.
 
+I have not tested this with a six digit display because I don't have one.
+
 Tested with kernel 2.6.32-3-amd64
