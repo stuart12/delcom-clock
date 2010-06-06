@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# A program to control a Delcom Engineering USB Numeric Display (USB ID 0fc5:1227)
+# http://www.delcomproducts.com/products_USBNDisplay.asp
 # 16 March 2010, Copyright 2010 Stuart Pook http://www.pook.it/
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,16 +21,20 @@ import os.path
 import sys
 import getopt
 import time
+import select
+import stat
+import math
 
 myname = os.path.basename(sys.argv[0])
 verbose = False
 seconds = False
 fork = False
-options = [ "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
-decimals = "10100"
+options = [ "control=", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
+dots = "10100"
 format = "%H%M%S"
 update = 1
 debug = None
+control = None
 def usage():
 	sys.exit("usage: " + myname + " " + str(options))
 try:
@@ -40,9 +46,11 @@ for o, a in opts:
 	if o in ("--fork"):
 		fork = True
 	elif o in ("--decimals"):
-		decimals = a
+		dots = a
 	elif o in ("--format"):
 		format = a
+	elif o in ("--control"):
+		control = a
 	elif o in ("--debug"):
 		debug = open(a, "w")
 	elif o in ("--update"):
@@ -61,12 +69,30 @@ def message(debug, mess):
 	if debug != None:
 		debug.write(mess + "\n")
 		debug.flush()
-	
+		
+poller = select.poll()
+if control != None:
+	if not os.path.exists(control):
+		os.mkfifo(control,  0600)
+		os.chown(control,  1000,  -1)
+#	message(debug, "open for write " + control)
+	message(debug, "open for read " + control)
+	control_fd = os.open(control,  os.O_RDONLY | os.O_NONBLOCK)
+	if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
+		sys.exit(control + " is not a pipe");
+	poller.register(control_fd)
+	keep_it_open_so_do_not_block = os.open(control,  os.O_WRONLY)
+	message(debug, "opened " + control)
+
 level = os.path.join(device, "../power/level")
 power = open(level)
 power_required = "auto\n"
 old_power = power.readline()
 power.close()
+
+if fork and os.fork() != 0:
+	sys.exit(0)
+	
 if old_power != power_required:
 	message(debug, "power was " + old_power)
 	power = open(level, "w")
@@ -80,33 +106,62 @@ def set_parameter(device, file, value, debug):
 	f.write(value + "\n")
 	f.close()
 	message(debug, "set " + name + " to " + value)
-
-set_parameter(device, "powered", "1", debug)
+	
+powered = open(os.path.join(device, "powered"), "w", buffering=0)
+	
+powered.write("1\n");
 set_parameter(device, "mode_msb", "8", debug)
 set_parameter(device, "mode_lsb", "255", debug)
 set_parameter(device, "textmode", "ascii", debug)
 
-text = open(os.path.join(device, "text"), "w")
+text = open(os.path.join(device, "text"), "w", buffering=0)
+
+command_gap = 25
+time.sleep(command_gap / 1000.0)
 
 text.write("888888\n")
-text.flush()
-set_parameter(device, "decimals", decimals, debug)
-time.sleep(1.0)
-
-if fork and os.fork() != 0:
-	sys.exit(0)
+time.sleep(command_gap / 1000.0)
+decimals = open(os.path.join(device, "decimals"), "w", buffering=0)
+decimals.write(dots + "\n")
+#set_parameter(device, "decimals", decimals, debug)
+time.sleep(command_gap / 1000.0)
 
 message(debug, "starting " + format + " " + str(update))
-
+on = True
 while True:
 	now = time.time()
-	localtime = time.localtime(now)
-	out = time.strftime(format, localtime)
+	if on:
+		localtime = time.localtime(now)
+		out = time.strftime(format, localtime)
+	else:
+		out = ""
 	text.write(out + '\n')
 	# this line is the hardest to get right
 	delay = update - now % 60 % update
-	text.flush()
-	message(debug, '[' + out + "] " + str(delay) + " " + str(now) + " " + str(localtime.tm_sec) + ' ' + str(now % 60))
-	time.sleep(delay)
+#	time.sleep(delay)
+	rdelay =  int(math.ceil(delay * 1000))
+	if rdelay < command_gap + 1:
+		print "rdelay too small ",  rdelay
+		rdelay = command_gap
+	message(debug, '[' + out + "] delay=" + str(delay) + " " + str(now) + " " + str(localtime.tm_sec) + ' ' + str(now % 60) + " " + str(rdelay))
+	read = poller.poll(rdelay)
+	if read != []:
+		message(debug, "something to read")
+		s = os.read(read[0][0],  100)
+		message(debug, "read " + s)
+		old_on = on
+		for c in s:
+			if c == "0":
+				on = False
+			if c == "1":
+				on = True
+		time.sleep(command_gap / 1000.0)
+		if old_on != on:
+			if on:
+				decimals.write(dots + "\n")
+			else:
+				decimals.write("\n")
+			message(debug, "powered " + str(on))
+			time.sleep(command_gap / 1000.0)
 
 sys.exit(0)

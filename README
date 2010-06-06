@@ -1,4 +1,4 @@
-This is a program to turn your Delcom Engineering USB Numeric Display
+This is a python program to turn your Delcom Engineering USB Numeric Display
 (USB ID 0fc5:1227) into a clock.
 
 http://www.delcomproducts.com/products_USBNDisplay.asp
