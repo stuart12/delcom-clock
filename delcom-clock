@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # A program to control a Delcom Engineering USB Numeric Display (USB ID 0fc5:1227)
 # http://www.delcomproducts.com/products_USBNDisplay.asp
-# 6 June 2010, Copyright 2010 Stuart Pook http://www.pook.it/
+# 29 July 2010, Copyright 2010 Stuart Pook http://www.pook.it/
 # Tested on Python 2.5.5
 #
 # This program is free software: you can redistribute it and/or modify
@@ -25,17 +25,19 @@ import time
 import select
 import stat
 import math
+import pwd
 
 myname = os.path.basename(sys.argv[0])
 verbose = False
 seconds = False
 fork = False
-options = [ "control=", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
+options = [ "chown=", "control=", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
 dots = "10100"
 format = "%H%M%S"
 update = 1
 debug = None
 control = None
+chown = None
 def usage():
 	sys.exit("usage: " + myname + " " + str(options))
 try:
@@ -46,6 +48,8 @@ except getopt.GetoptError:
 for o, a in opts:
 	if o in ("--fork"):
 		fork = True
+	elif o in ("--chown"):
+		chown = a
 	elif o in ("--decimals"):
 		dots = a
 	elif o in ("--format"):
@@ -71,10 +75,16 @@ def message(debug, mess):
 		debug.write(mess + "\n")
 		debug.flush()
 		
+if chown != None:
+	chown = pwd.getpwnam(chown)
+		
 poller = select.poll()
 if control != None:
 	if not os.path.exists(control):
 		os.mkfifo(control,  0600)
+		if chown != None:
+			os.chown(control,  chown.pw_uid,  chown.pw_gid)
+			message(debug, "chown " + control + " to " + str(chown.pw_uid) + " " + str(chown.pw_gid))
 	message(debug, "opening for read " + control)
 	control_fd = os.open(control,  os.O_RDONLY | os.O_NONBLOCK)
 	if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
@@ -88,7 +98,6 @@ power = open(level)
 power_required = "auto\n"
 old_power = power.readline()
 power.close()
-
 if fork and os.fork() != 0:
 	sys.exit(0)
 	
@@ -149,8 +158,10 @@ while True:
 		for c in s:
 			if c == "0":
 				on = False
-			if c == "1":
+			elif c == "1":
 				on = True
+			elif c == '~':
+				on = not on
 		time.sleep(command_gap / 1000.0)
 		if old_on != on:
 			if on:
