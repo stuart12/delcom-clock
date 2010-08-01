@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # A program to control a Delcom Engineering USB Numeric Display (USB ID 0fc5:1227)
 # http://www.delcomproducts.com/products_USBNDisplay.asp
-# 29 July 2010, Copyright 2010 Stuart Pook http://www.pook.it/
-# Tested on Python 2.5.5
+# 1 August 2010, Copyright 2010 Stuart Pook http://www.pook.it/
+# Tested on Python 2.6.5
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,20 +26,34 @@ import select
 import stat
 import math
 import pwd
+import syslog
+
+def message(debug, mess):
+	if debug != None:
+		debug.write(mess + "\n")
+		debug.flush()
+
+def set_parameter(device, file, value, debug):
+	name = os.path.join(device, file)
+	f = open(name, "w")
+	f.write(value + "\n")
+	f.close()
+	message(debug, "set " + name + " to " + value)
+def usage():
+	sys.exit("usage: " + myname + " " + str(options))
 
 myname = os.path.basename(sys.argv[0])
 verbose = False
 seconds = False
 fork = False
-options = [ "chown=", "control=", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
+options = [ "chown=", "control=", "syslog", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
 dots = "10100"
 format = "%H%M%S"
 update = 1
 debug = None
 control = None
 chown = None
-def usage():
-	sys.exit("usage: " + myname + " " + str(options))
+do_syslog = False
 try:
 	opts, args = getopt.getopt(sys.argv[1:], "v", options)
 except getopt.GetoptError:
@@ -48,6 +62,7 @@ except getopt.GetoptError:
 for o, a in opts:
 	if o in ("--fork"):
 		fork = True
+		do_syslog = True
 	elif o in ("--chown"):
 		chown = a
 	elif o in ("--decimals"):
@@ -56,6 +71,8 @@ for o, a in opts:
 		format = a
 	elif o in ("--control"):
 		control = a
+	elif o in ("--syslog"):
+		do_syslog = True
 	elif o in ("--debug"):
 		debug = open(a, "w")
 	elif o in ("--update"):
@@ -69,70 +86,68 @@ for o, a in opts:
 		usage()
 
 device = args[0]
-debug == None or debug.write("device " + device + "\n")
-def message(debug, mess):
-	if debug != None:
-		debug.write(mess + "\n")
-		debug.flush()
-		
-if chown != None:
-	chown = pwd.getpwnam(chown)
-		
 poller = select.poll()
-if control != None:
-	if not os.path.exists(control):
-		os.mkfifo(control,  0600)
-		if chown != None:
-			os.chown(control,  chown.pw_uid,  chown.pw_gid)
-			message(debug, "chown " + control + " to " + str(chown.pw_uid) + " " + str(chown.pw_gid))
-	message(debug, "opening for read " + control)
-	control_fd = os.open(control,  os.O_RDONLY | os.O_NONBLOCK)
-	if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
-		sys.exit(control + " is not a pipe");
-	poller.register(control_fd)
-	keep_it_open_so_do_not_block = os.open(control,  os.O_WRONLY)
-	message(debug, "opened " + control)
 
-level = os.path.join(device, "../power/level")
-power = open(level)
-power_required = "auto\n"
-old_power = power.readline()
-power.close()
-if fork and os.fork() != 0:
-	sys.exit(0)
-	
-if old_power != power_required:
-	message(debug, "power was " + old_power)
-	power = open(level, "w")
-	power.write(power_required)
+if do_syslog:
+	syslog.openlog("delcom-clock",  0,  syslog.LOG_DAEMON)
+	syslog.syslog(syslog.LOG_INFO,  "starting " + device)
+debug == None or debug.write("device " + device + "\n")
+
+try:
+	if control != None:
+		if not os.path.exists(control):
+			os.mkfifo(control,  0600)
+			if chown != None:
+				uids = pwd.getpwnam(chown)
+				os.chown(control,  uids.pw_uid,  uids.pw_gid)
+				message(debug, "chown " + control + " to " + str(uids.pw_uid) + ":" + str(uids.pw_gid))
+		message(debug, "opening for read " + control)
+		control_fd = os.open(control,  os.O_RDONLY | os.O_NONBLOCK)
+		if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
+			sys.exit(control + " is not a pipe");
+		poller.register(control_fd)
+		keep_it_open_so_do_not_block = os.open(control,  os.O_WRONLY)
+		message(debug, "opened " + control)
+
+	level = os.path.join(device, "../power/level")
+	power = open(level)
+	power_required = "auto\n"
+	old_power = power.readline()
 	power.close()
-	time.sleep(5.0) # magic delay value
+	if fork and os.fork() != 0:
+		sys.exit(0)
+		
+	if old_power != power_required:
+		message(debug, "power was " + old_power)
+		power = open(level, "w")
+		power.write(power_required)
+		power.close()
+		time.sleep(5.0) # magic delay value
+		
+	set_parameter(device, "powered", "1", debug)
+	set_parameter(device, "mode_msb", "8", debug)
+	set_parameter(device, "mode_lsb", "255", debug)
+	set_parameter(device, "textmode", "ascii", debug)
 
-def set_parameter(device, file, value, debug):
-	name = os.path.join(device, file)
-	f = open(name, "w")
-	f.write(value + "\n")
-	f.close()
-	message(debug, "set " + name + " to " + value)
-	
-set_parameter(device, "powered", "1", debug)
-set_parameter(device, "mode_msb", "8", debug)
-set_parameter(device, "mode_lsb", "255", debug)
-set_parameter(device, "textmode", "ascii", debug)
+	text = open(os.path.join(device, "text"), "w", buffering=0)
 
-text = open(os.path.join(device, "text"), "w", buffering=0)
+	command_gap = 25
+	time.sleep(command_gap / 1000.0)
 
-command_gap = 25
-time.sleep(command_gap / 1000.0)
-
-text.write("888888\n")
-time.sleep(command_gap / 1000.0)
-decimals = open(os.path.join(device, "decimals"), "w", buffering=0)
-decimals.write(dots + "\n")
+	text.write("888888\n")
+	time.sleep(command_gap / 1000.0)
+	decimals = open(os.path.join(device, "decimals"), "w", buffering=0)
+	decimals.write(dots + "\n")
+except Exception as e:
+	syslog.syslog(syslog.LOG_ERR,  "error on " + device + ": " + str(e))
+	raise
+		
 #set_parameter(device, "decimals", decimals, debug)
 time.sleep(command_gap / 1000.0)
 
 message(debug, "starting " + format + " " + str(update))
+if do_syslog:
+	syslog.syslog(syslog.LOG_INFO,  "initialised " + device)
 on = True
 while True:
 	now = time.time()
