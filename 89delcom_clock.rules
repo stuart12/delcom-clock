@@ -10,12 +10,12 @@
 
 # plugged into a hub
 ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
-	KERNEL=="2-[0-9].[0-9]:1.0", \
-	RUN += "/usr/local/lib/delcom-clock --fork --format '%%d  %%H%%M' --decimals 0100 --update 60 /sys/$devpath"
+	KERNEL=="3-[0-9].[0-9]:1.0", \
+	RUN+="/usr/local/lib/delcom-clock --fork --format '%%d  %%H%%M' --decimals 0100 --update 60 /sys/$devpath"
 
 ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
 	KERNEL=="1-[0-9].[0-9]:1.0", \
-	RUN += "/usr/local/lib/delcom-clock --control /var/run/led-bedroom --fork --format '%%w%%d %%k%%M' --decimals 10000100 --update 60 /sys/$devpath"
+	RUN+="/usr/local/lib/delcom-clock --control /var/run/led-bedroom --chown stuart --fork --format '%%w%%d %%k%%M' --decimals 10000100 --update 60 /sys/$devpath"
 
 # directly plugged into the computer
 ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
@@ -25,3 +25,6 @@ ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
 #RUN += "/bin/bash -c 'echo /sys/$devpath $major $minor r=$result i=$id n=$number k=$kernel p=$parent r=$root >> /tmp/udev.txt'"
 
 # the next step is to fix the modes on the device files as they should not be 0666
+
+# :; sudo udevadm info --query=all  --attribute-walk  --path=/devices/pci0000:00/0000:00:1a.0/usb2/2-1/2-1:1.0
+
