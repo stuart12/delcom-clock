@@ -24,8 +24,8 @@ don't have one. If the kernel module only accepts 6 digits, then delcom-clock
 with just use the last 6 digits of the text to be displayed.
 
 If you have 8 digit display you need to recompile the usbsevseg module
-so that it will accept 8 digits. Just set MAXLEN to 8 rather than 6. See
-the README.module script for how to do this.
+if you want to use more than just the rightmost 6 digits. Just set MAXLEN
+to 8 rather than 6. See the README.module script for how to do this.
 
 This program can be found at http://github.com/stuart12/delcom-clock
 

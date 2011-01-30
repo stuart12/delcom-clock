@@ -1,6 +1,7 @@
 #!/bin/sh -ex
-# Recompile the usbsevseg kernel module for 8 digit displays on Debian systems.
+# Recompile the usbsevseg kernel module to use all 8 digits of 8 digit displays.
 # Stuart Pook, 30 January 2011
+# Tested on Debian unstable Linux
 # http://forums.debian.net/viewtopic.php?f=17&t=58496&sid=afaafaeea59d94b30e76209918499f08
 # http://wiki.debian.org/HowToRebuildAnOfficialDebianKernelPackage
 r=`uname -r`
