@@ -1,0 +1,27 @@
+#!/bin/sh -ex
+# Recompile the usbsevseg kernel module for 8 digit displays on Debian systems.
+# Stuart Pook, 30 January 2011
+# http://forums.debian.net/viewtopic.php?f=17&t=58496&sid=afaafaeea59d94b30e76209918499f08
+# http://wiki.debian.org/HowToRebuildAnOfficialDebianKernelPackage
+r=`uname -r`
+s=`echo $r | sed -e 's/-.*//'`
+sudo apt-get install kernel-package 
+sudo apt-get install -t experimental "$@" linux-source-$s linux-headers-$r
+cd /usr/src
+src=linux-source-$s
+[ -d $src ] || tar -jxf linux-source-$s.tar.bz2
+cd linux-source-$s
+sed -i '/^#define.*MAXLEN/s/6$/8/' drivers/usb/misc/usbsevseg.c
+
+ln -fs /boot/config-$r .config
+ln -fs /usr/src/linux-headers-$r/Module.symvers .
+make modules_prepare
+make M=drivers/usb/misc/
+
+dest=/lib/modules/$r/updates
+[ -d $dest ] || sudo mkdir --mode=755 $dest
+sudo cp drivers/usb/misc/usbsevseg.ko $dest/.
+sudo sh -c 'umask 22; depmod -a'
+sudo rmmod usbsevseg
+sudo modprobe -v usbsevseg
+
