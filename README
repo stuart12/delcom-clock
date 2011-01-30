@@ -1,6 +1,8 @@
 This is a python program to turn your seven segment
-Delcom Engineering USB Numeric Display (USB ID 0fc5:1227)
+Generation I Delcom Engineering USB Numeric Display (USB ID 0fc5:1227)
 into a clock.
+
+Author: Stuart Pook
 
 You can turn the clock on and off by writing 1 or 0 into a named pipe
 (see the --control option).
@@ -18,9 +20,8 @@ Delcom-clock should use raw mode so that it can show space characters
 rather than hyphens.
 
 I have not tested this with a six digit 7 segment display because I
-don't have one.
-
-Tested with Debian Linux kernel 2.6.32-3-amd64
+don't have one. If the kernel module only accepts 6 digits, then delcom-clock
+with just use the last 6 digits of the text to be displayed.
 
 This program can be found at http://github.com/stuart12/delcom-clock
 
