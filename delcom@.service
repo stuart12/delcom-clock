@@ -1,5 +1,7 @@
-# don't forget to run this command when you modify the file
-# systemctl daemon-reload
+# This file has to be installed in /etc/systemd/system/delcom@.service
+# Don't forget to run this command when you install or modify this file:
+# sudo systemctl --system daemon-reload
+
 # Stuart Pook http://www.pook.it/
 # https://github.com/stuart12/delcom-clock
 
