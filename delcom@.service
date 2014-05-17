@@ -1,0 +1,13 @@
+# don't forget to run this command when you modify the file
+# systemctl daemon-reload
+# Stuart Pook http://www.pook.it/
+# https://github.com/stuart12/delcom-clock
+
+[Unit]
+Description=Show clock on delcom
+BindsTo=%i
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/delcom-runner %I
+

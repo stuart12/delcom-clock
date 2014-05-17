@@ -1,30 +1,32 @@
 # Delcom Engineering, USB Numeric Display
-# Stuart Pook http://www.pook.it/ 16 March 2010
+# Stuart Pook http://www.pook.it/ Saturday 17 May  17:41:04 CEST 2014
 # this file should be called /etc/udev/rules.d/89delcom_clock.rules and will cause udev
-# the start delcom-clock as soon as you plug in a display
+# and systemd to start delcom-clock as soon as you plug in a display
+# https://github.com/stuart12/delcom-clock
 
-# if you only have one device or you want them all to have the same display
-# you will not need the KERNEL lines
-
-# This file was written for udev 151-3 un Debian unstable.
-
-# plugged into a hub
-ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
-	KERNEL=="3-[0-9].[0-9]:1.0", \
-	RUN+="/usr/local/lib/delcom-clock --fork --format '%%d  %%H%%M' --decimals 0100 --update 60 /sys/$devpath"
+# This file was written for Debian unstable and systemd.
 
 ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
-	KERNEL=="1-[0-9].[0-9]:1.0", \
-	RUN+="/usr/local/lib/delcom-clock --control /var/run/led-bedroom --chown stuart --fork --format '%%w%%d %%k%%M' --decimals 10000100 --update 60 /sys/$devpath"
-
-# directly plugged into the computer
-ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
-	KERNEL=="[0-9]-[0-9]:1.0", \
-	RUN+="/usr/local/lib/delcom-clock --fork /sys/$devpath"
-
-#RUN += "/bin/bash -c 'echo /sys/$devpath $major $minor r=$result i=$id n=$number k=$kernel p=$parent r=$root >> /tmp/udev.txt'"
+	SUBSYSTEM=="usb", \
+	DRIVER=="usbsevseg", \
+	TAG+="systemd" \
+	ENV{SYSTEMD_WANTS}="delcom@%k.service"
 
 # the next step is to fix the modes on the device files as they should not be 0666
 
 # :; sudo udevadm info --query=all  --attribute-walk  --path=/devices/pci0000:00/0000:00:1a.0/usb2/2-1/2-1:1.0
 
+#debug
+#sudo udevadm  monitor
+#and then
+#sudo udevadm test  /devices/pci0000:00/0000:00:1d.7/usb10/10-4/10-4.4 
+
+# for a given device
+# sudo udevadm test $(udevadm info --query=path --name /dev/bus/usb/007/064)
+# udevadm info --name /dev/bus/usb/007/064
+
+# don't forget to look for the clocks in /sys/bus/usb/drivers/usbsevseg/
+
+# http://blog.fraggod.net/2012/06/16/proper-ish-way-to-start-long-running-systemd-service-on-udev-event-device-hotplug.html
+# http://patrakov.blogspot.fr/2011/01/writing-systemd-service-files.html
+# http://forums.opensuse.org/showthread.php/485261-Script-run-from-udev-rule-gets-killed-shortly-after-start
