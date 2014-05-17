@@ -1,5 +1,7 @@
 #!/bin/bash
-# 17 May 2014, Copyright 2014 Stuart Pook http://www.pook.it/
+# This file is called by systemd via delcom@.service
+#
+# delcom-clock Copyright 2014 Stuart Pook http://www.pook.it/
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,6 +21,9 @@
 # I have 3 clocks and I want them to show different things.  I use the
 # kernel device to distinguish between the different clocks.
 
+# You don;t need this script if you want all you clocks to show the same thing.
+# Just call delcom-clock directly from delcom@.service
+
 if [[ "$1" =~ [0-9]+\.[0-9]+: ]]
 then
 	: in a hub
@@ -26,7 +31,6 @@ then
 	update="--update 60"
 	case "$1" in
 	*.3:*)
-
 		: in position 3 in a hub
 		args="--control /run/led-bedroom --chown stuart"
 		decimals=10000101
@@ -41,6 +45,4 @@ else
 	format='%w %H%M%S'
 fi
 
-# systemd replaces the - in the kernel device with a /, put the dash back
-
-exec /usr/local/lib/delcom-clock --syslog --decimals $decimals $update --format "$format" $args ${1/\//-}
+exec /usr/local/lib/delcom-clock --syslog --decimals $decimals $update --format "$format" $args --fix-slash "$1"

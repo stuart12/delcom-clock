@@ -4,10 +4,13 @@
 # https://github.com/stuart12/delcom-clock
 
 [Unit]
-Description=Show clock on delcom
+Description=Show time on Delcom 7 segment LED display
+# The BindsTo does not work.
 BindsTo=%i
 
 [Service]
 Type=simple
 ExecStart=/usr/local/lib/delcom-runner %I
 
+# If you have simple setup you don't need delcom-runner, just do
+#ExecStart=/usr/local/lib/delcom-clock --fix-slash %I

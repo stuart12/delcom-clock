@@ -51,7 +51,7 @@ myname = os.path.basename(sys.argv[0])
 verbose = False
 seconds = False
 fork = False
-options = [ "chown=", "control=", "syslog", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
+options = [ "usbsevseg", "fix-slash", "chown=", "control=", "syslog", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
 dots = "10100"
 format = "%H%M%S"
 update = 1
@@ -59,6 +59,7 @@ debug = None
 control = None
 chown = None
 do_syslog = False
+fix_slash = False
 usbsevseg = "/sys/bus/usb/drivers/usbsevseg"
 try:
 	opts, args = getopt.getopt(sys.argv[1:], "v", options)
@@ -79,6 +80,8 @@ for o, a in opts:
 		usbsevseg = a
 	elif o in ("--control"):
 		control = a
+	elif o in ("--fix-slash"):
+		fix_slash = True
 	elif o in ("--syslog"):
 		do_syslog = True
 	elif o in ("--debug"):
@@ -93,7 +96,10 @@ for o, a in opts:
 		print "bad option", o
 		usage()
 
-short_device = args[0]
+if not args:
+	usage()
+
+short_device = args[0].replace('/', '-') if fix_slash else args[0]
 
 if do_syslog:
 	syslog.openlog("delcom-clock",  0,  syslog.LOG_DAEMON)
@@ -103,6 +109,7 @@ if debug:
 	sys.stdout = debug
 	debug.write("device " + short_device + "\n")
 
+	
 device = os.path.join(usbsevseg, short_device)
 
 poller = select.poll()
