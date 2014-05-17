@@ -35,7 +35,9 @@ def message(debug, mess):
 		debug.flush()
 
 def set_parameter(device, file, value, debug):
+	message(debug, "set_parameter(%s, %s, %s)" % (device, file, value))
 	name = os.path.join(device, file)
+	message(debug, "setting " + name + " to " + value)
 	f = open(name, "w")
 	f.write(value + "\n")
 	f.close()
@@ -55,6 +57,7 @@ debug = None
 control = None
 chown = None
 do_syslog = False
+usbsevseg = "/sys/bus/usb/drivers/usbsevseg"
 try:
 	opts, args = getopt.getopt(sys.argv[1:], "v", options)
 except getopt.GetoptError:
@@ -70,6 +73,8 @@ for o, a in opts:
 		dots = a
 	elif o in ("--format"):
 		format = a
+	elif o in ("--usbsevseg"):
+		usbsevseg = a
 	elif o in ("--control"):
 		control = a
 	elif o in ("--syslog"):
@@ -86,13 +91,19 @@ for o, a in opts:
 		print "bad option", o
 		usage()
 
-device = args[0]
-poller = select.poll()
+short_device = args[0]
 
 if do_syslog:
 	syslog.openlog("delcom-clock",  0,  syslog.LOG_DAEMON)
-	syslog.syslog(syslog.LOG_INFO,  "starting " + device)
-debug == None or debug.write("device " + device + "\n")
+	syslog.syslog(syslog.LOG_INFO,  "starting " + short_device)
+if debug:
+	sys.stderr = debug
+	sys.stdout = debug
+	debug.write("device " + short_device + "\n")
+
+device = os.path.join(usbsevseg, short_device)
+
+poller = select.poll()
 
 try:
 	if control != None:
@@ -111,7 +122,9 @@ try:
 		message(debug, "opened " + control)
 
 	level = os.path.join(device, "../power/level")
+	message(debug, "opening " + level)
 	power = open(level)
+	message(debug, "opened " + level)
 	power_required = "auto\n"
 	old_power = power.readline()
 	power.close()
@@ -121,9 +134,13 @@ try:
 	if old_power != power_required:
 		message(debug, "power was " + old_power)
 		power = open(level, "w")
+		message(debug, "opened " + level)
 		power.write(power_required)
 		power.close()
-		time.sleep(5.0) # magic delay value
+		magic_delay = 5.0
+		message(debug, "sleeping " + str(magic_delay))
+		time.sleep(magic_delay)
+		message(debug, "slept " + str(magic_delay))
 		
 	set_parameter(device, "powered", "1", debug)
 	set_parameter(device, "mode_msb", "8", debug)
