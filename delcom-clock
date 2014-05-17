@@ -2,8 +2,10 @@
 # A program to control a Delcom Engineering USB Numeric Display (USB ID 0fc5:1227)
 # Note that this is the old display type.
 # http://www.delcomproducts.com/products_USBNDisplay.asp
-# 1 August 2010, Copyright 2010 Stuart Pook http://www.pook.it/
-# Tested on Python 2.6.6 and Linux 2.6.34 & 2.6.37
+# 17 May 2014, Copyright 2010, 2014 Stuart Pook http://www.pook.it/
+# https://github.com/stuart12/delcom-clock
+
+# Tested on Python 2.6.6 and Linux 2.6.34, 2.6.37, 3.14
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
