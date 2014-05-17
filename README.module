@@ -7,7 +7,8 @@
 r=`uname -r`
 s=`echo $r | sed -e 's/-.*//'`
 sudo apt-get install kernel-package 
-sudo apt-get install -t experimental "$@" linux-source-$s linux-headers-$r
+#dist="-t experimental"
+sudo apt-get install $dist "$@" linux-source-$s linux-headers-$r
 cd /usr/src
 src=linux-source-$s
 [ -d $src ] || tar -jxf linux-source-$s.tar.bz2
