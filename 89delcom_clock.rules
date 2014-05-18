@@ -8,18 +8,18 @@
 # This file was written for Debian unstable and systemd.
 
 ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
-	SUBSYSTEM=="usb", \
+	ACTION=="add", \
 	DRIVER=="usbsevseg", \
-	TAG+="systemd" \
-	ENV{SYSTEMD_WANTS}="delcom@%k.service"
-
-# the next step is to fix the modes on the device files as they should not be 0666
+	SUBSYSTEM=="usb", \
+	PROGRAM = "/bin/sed -e s@.*@$devpath@ -e 's@-@\\x2d@g' -e s@/@-@g -e q /etc/passwd", \
+	ENV{SYSTEMD_WANTS}="delcom@$result", \
+	TAG+="systemd"
 
 # sudo udevadm info --query=all  --attribute-walk  --path=/devices/pci0000:00/0000:00:1a.0/usb2/2-1/2-1:1.0
 
 #debug
 #sudo udevadm  monitor
-#and then
+#and then feed the UDEV add file to
 #sudo udevadm test  /devices/pci0000:00/0000:00:1d.7/usb10/10-4/10-4.4 
 
 # for a given device

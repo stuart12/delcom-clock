@@ -7,12 +7,12 @@
 
 [Unit]
 Description=Show time on Delcom 7 segment LED display
-# The BindsTo does not work.
-BindsTo=%i
+BindsTo=sys%i.device
 
 [Service]
+# next step: use fork mode
 Type=simple
-ExecStart=/usr/local/lib/delcom-runner %I
+ExecStart=/usr/local/lib/delcom-runner /sys%I
 
 # If you have simple setup you don't need delcom-runner, just do
-#ExecStart=/usr/local/lib/delcom-clock --fix-slash %I
+#ExecStart=/usr/local/lib/delcom-clock /sys%I

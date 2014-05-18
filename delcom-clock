@@ -30,6 +30,7 @@ import stat
 import math
 import pwd
 import syslog
+import signal
 
 def message(debug, mess):
 	if debug != None:
@@ -51,7 +52,7 @@ myname = os.path.basename(sys.argv[0])
 verbose = False
 seconds = False
 fork = False
-options = [ "usbsevseg", "fix-slash", "chown=", "control=", "syslog", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
+options = [ "usbsevseg=", "chown=", "control=", "syslog", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
 dots = "10100"
 format = "%H%M%S"
 update = 1
@@ -59,7 +60,6 @@ debug = None
 control = None
 chown = None
 do_syslog = False
-fix_slash = False
 usbsevseg = "/sys/bus/usb/drivers/usbsevseg"
 try:
 	opts, args = getopt.getopt(sys.argv[1:], "v", options)
@@ -80,8 +80,6 @@ for o, a in opts:
 		usbsevseg = a
 	elif o in ("--control"):
 		control = a
-	elif o in ("--fix-slash"):
-		fix_slash = True
 	elif o in ("--syslog"):
 		do_syslog = True
 	elif o in ("--debug"):
@@ -99,18 +97,22 @@ for o, a in opts:
 if not args:
 	usage()
 
-short_device = args[0].replace('/', '-') if fix_slash else args[0]
+device = os.path.join(usbsevseg, args[0])
+short_device = os.path.basename(device)
 
 if do_syslog:
 	syslog.openlog("delcom-clock",  0,  syslog.LOG_DAEMON)
-	syslog.syslog(syslog.LOG_INFO,  "starting " + short_device)
+	syslog.syslog(syslog.LOG_INFO, "%s: starting %s (%s)" % (short_device, device, args[0]))
 if debug:
 	sys.stderr = debug
 	sys.stdout = debug
 	debug.write("device " + short_device + "\n")
 
-	
-device = os.path.join(usbsevseg, short_device)
+def signal_handler(signal, frame):
+	syslog.syslog(syslog.LOG_INFO, "%s: exiting on signal %d" % (short_device, signal))
+	sys.exit(1)
+for s in [ signal.SIGINT, signal.SIGTERM, signal.SIGHUP ]:
+	signal.signal(s, signal_handler)
 
 poller = select.poll()
 
@@ -159,7 +161,7 @@ try:
 	text = open(os.path.join(device, "text"), "w", buffering=0)
 	decimals = open(os.path.join(device, "decimals"), "w", buffering=0)
 except Exception as e:
-	syslog.syslog(syslog.LOG_ERR,  "error on " + device + ": " + str(e))
+	syslog.syslog(syslog.LOG_ERR,  short_device + ": initialisation error: " + str(e))
 	raise
 
 command_gap = 25
@@ -190,7 +192,7 @@ time.sleep(command_gap / 1000.0)
 
 message(debug, "starting " + format + " " + str(update))
 if do_syslog:
-	syslog.syslog(syslog.LOG_INFO,  "initialised " + device)
+	syslog.syslog(syslog.LOG_INFO,  "%s: updating %s every %d seconds" % (short_device, format, update))
 on = True
 while True:
 	now = time.time()

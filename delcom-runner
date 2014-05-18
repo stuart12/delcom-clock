@@ -24,13 +24,13 @@
 # You don;t need this script if you want all you clocks to show the same thing.
 # Just call delcom-clock directly from delcom@.service
 
-if [[ "$1" =~ [0-9]+\.[0-9]+: ]]
+if [[ "$1" =~ /[0-9]+-[0-9]+\.[0-9]+:1\.0$ ]]
 then
 	: in a hub
 	format='%m%d %k%M'
-	update="--update 60"
+	update=60
 	case "$1" in
-	*.3:*)
+	*.3:1.0)
 		: in position 3 in a hub
 		args="--control /run/led-bedroom --chown stuart"
 		decimals=10000101
@@ -43,6 +43,7 @@ else
 	: not in a hub
 	decimals=00010100
 	format='%w %H%M%S'
+	update=1
 fi
 
-exec /usr/local/lib/delcom-clock --syslog --decimals $decimals $update --format "$format" $args --fix-slash "$1"
+exec /usr/local/lib/delcom-clock --syslog --decimals $decimals --update $update --format "$format" $args -- "$1"
