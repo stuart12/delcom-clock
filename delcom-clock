@@ -117,21 +117,6 @@ for s in [ signal.SIGINT, signal.SIGTERM, signal.SIGHUP ]:
 poller = select.poll()
 
 try:
-	if control != None:
-		if not os.path.exists(control):
-			os.mkfifo(control,  0600)
-			if chown != None:
-				uids = pwd.getpwnam(chown)
-				os.chown(control,  uids.pw_uid,  uids.pw_gid)
-				message(debug, "chown " + control + " to " + str(uids.pw_uid) + ":" + str(uids.pw_gid))
-		message(debug, "opening for read " + control)
-		control_fd = os.open(control,  os.O_RDONLY | os.O_NONBLOCK)
-		if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
-			sys.exit(control + " is not a pipe");
-		poller.register(control_fd)
-		keep_it_open_so_do_not_block = os.open(control,  os.O_WRONLY)
-		message(debug, "opened " + control)
-
 	level = os.path.join(device, "../power/level")
 	message(debug, "opening " + level)
 	power = open(level)
@@ -190,9 +175,28 @@ except Exception as e:
 #set_parameter(device, "decimals", decimals, debug)
 time.sleep(command_gap / 1000.0)
 
+try:
+	if control != None:
+		if not os.path.exists(control):
+			os.mkfifo(control, 0600)
+			if chown != None:
+				uids = pwd.getpwnam(chown)
+				os.chown(control, uids.pw_uid, uids.pw_gid)
+				message(debug, "chown " + control + " to " + str(uids.pw_uid) + ":" + str(uids.pw_gid))
+		message(debug, "opening for read " + control)
+		control_fd = os.open(control, os.O_RDONLY | os.O_NONBLOCK)
+		if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
+			sys.exit(control + " is not a pipe");
+		poller.register(control_fd)
+		keep_it_open_so_do_not_block = os.open(control, os.O_WRONLY)
+		message(debug, "opened " + control)
+except Exception as e:
+	syslog.syslog(syslog.LOG_ERR, "error setting up control " + control + ": " + str(e))
+	raise
+
 message(debug, "starting " + format + " " + str(update))
 if do_syslog:
-	syslog.syslog(syslog.LOG_INFO,  "%s: updating %s every %d seconds" % (short_device, format, update))
+	syslog.syslog(syslog.LOG_INFO, "%s: updating %s every %d seconds controlled by %s" % (short_device, format, update, control))
 on = True
 while True:
 	now = time.time()
