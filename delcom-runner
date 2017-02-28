@@ -24,7 +24,34 @@
 # You don;t need this script if you want all you clocks to show the same thing.
 # Just call delcom-clock directly from delcom@.service
 
-if [[ "$1" =~ /[0-9]+-[0-9]+\.[0-9]+:1\.0$ ]]
+format='%m%d %k%M'
+update=60
+
+case "$1" in
+*.3:1.0)
+	args="--off --control /run/led-bedroom --chown stuart"
+	decimals=10000101
+	;;
+*/3-13:1.0|*.4:1.0)
+	decimals=00010100
+	format='%w %H%M%S'
+	update=1
+	;;
+*)
+	decimals=10000100
+	;;
+esac
+
+exec /usr/local/lib/delcom-clock --syslog --decimals $decimals --update $update --format "$format" $args -- "$1"
+####
+
+decimals=00010100
+format='%w %H%M%S'
+update=1
+if [[ "$1" =~ /0000:00:..\../0000:0.:00\.0/usb[0-9]+/[0-9]+-[0-9]+\.[0-9]+:1\.0$ ]]
+then
+	: USB 3.0 card
+elif [[ "$1" =~ /[0-9]+-[0-9]+\.[0-9]+:1\.0$ ]]
 then
 	: in a hub
 	format='%m%d %k%M'
@@ -41,9 +68,6 @@ then
 	esac
 else
 	: not in a hub
-	decimals=00010100
-	format='%w %H%M%S'
-	update=1
 fi
 
 exec /usr/local/lib/delcom-clock --syslog --decimals $decimals --update $update --format "$format" $args -- "$1"
