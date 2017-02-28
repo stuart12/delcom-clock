@@ -163,9 +163,12 @@ except IOError as e:
 time.sleep(command_gap / 1000.0)
 
 try:
-	text.write("8" * length + "\n")
-	time.sleep(command_gap / 1000.0 )
-	decimals.write("1" * length + "\n")
+	if start_off:
+		decimals.write("1" + "0" * (length - 1) + "\n")
+	else:
+		text.write("8" * length + "\n")
+		time.sleep(command_gap / 1000.0 )
+		decimals.write("1" * length + "\n")
 	time.sleep(0.75 +command_gap / 1000.0)
 	decimals.write(dots[-length:] + "\n")
 except Exception as e:
@@ -197,7 +200,7 @@ except Exception as e:
 message(debug, "starting " + format + " " + str(update))
 if do_syslog:
 	syslog.syslog(syslog.LOG_INFO, "%s: updating %s every %d seconds controlled by %s" % (short_device, format, update, control))
-on = True
+on = not start_off
 while True:
 	now = time.time()
 	if on:
