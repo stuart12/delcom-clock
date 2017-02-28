@@ -52,7 +52,12 @@ myname = os.path.basename(sys.argv[0])
 verbose = False
 seconds = False
 fork = False
-options = [ "usbsevseg=", "chown=", "control=", "syslog", "decimals=", "debug=", "format=", "update=", "fork", "delay=", "verbose", "noverbose", ]
+options = [ "usbsevseg=", "chown=", "control=", "syslog", "decimals=", "debug=", "format=", "update=", "fork",
+		"delay=",
+		"verbose",
+		"off",
+		"noverbose",
+		]
 dots = "10100"
 format = "%H%M%S"
 update = 1
@@ -61,6 +66,7 @@ control = None
 chown = None
 do_syslog = False
 usbsevseg = "/sys/bus/usb/drivers/usbsevseg"
+start_off = False
 try:
 	opts, args = getopt.getopt(sys.argv[1:], "v", options)
 except getopt.GetoptError:
@@ -88,6 +94,8 @@ for o, a in opts:
 		update = int(a)
 	elif o in ("-v", "--verbose"):
 		debug = open("/dev/stdout", "w")
+	elif o in ("--off"):
+		start_off = True
 	elif o in ("--noverbose"):
 		debug = None
 	else:
@@ -154,7 +162,7 @@ time.sleep(command_gap / 1000.0)
 
 length = 8
 try:
-	text.write("6" * length + "\n")
+	decimals.write("01" + "0" * (length - 2) + "\n")
 	time.sleep(0.5 +command_gap / 1000.0)
 except IOError as e:
 	length = 6
@@ -165,12 +173,14 @@ time.sleep(command_gap / 1000.0)
 try:
 	if start_off:
 		decimals.write("1" + "0" * (length - 1) + "\n")
+		time.sleep(0.75 + command_gap / 1000.0)
+		decimals.write("0" * length + "\n")
 	else:
 		text.write("8" * length + "\n")
 		time.sleep(command_gap / 1000.0 )
 		decimals.write("1" * length + "\n")
-	time.sleep(0.75 +command_gap / 1000.0)
-	decimals.write(dots[-length:] + "\n")
+		time.sleep(0.75 +command_gap / 1000.0)
+		decimals.write(dots[-length:] + "\n")
 except Exception as e:
 	syslog.syslog(syslog.LOG_ERR,  "error on " + device + ": " + str(e))
 	raise
@@ -203,8 +213,8 @@ if do_syslog:
 on = not start_off
 while True:
 	now = time.time()
+	localtime = time.localtime(now)
 	if on:
-		localtime = time.localtime(now)
 		out = time.strftime(format, localtime)
 	else:
 		out = ""
