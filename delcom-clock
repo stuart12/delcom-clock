@@ -214,11 +214,8 @@ on = not start_off
 while True:
 	now = time.time()
 	localtime = time.localtime(now)
-	if on:
-		out = time.strftime(format, localtime)
-	else:
-		out = ""
-	text.write(out[-length:] + '\n')
+	out = time.strftime(format, localtime)[-length:]
+	text.write(out if on else "" + '\n')
 	# this line is the hardest to get right
 	delay = update - now % 60 % update
 	rdelay =  int(math.ceil(delay * 1000))
@@ -239,6 +236,11 @@ while True:
 				on = True
 			elif c == '~':
 				on = not on
+			elif c == '!':
+				messages = ["\n", out]
+				for m in [not on, on]:
+					time.sleep(4 * command_gap / 1000.0)
+					text.write(messages[int(m)] + "\n")
 		time.sleep(command_gap / 1000.0)
 		if old_on != on:
 			if on:
