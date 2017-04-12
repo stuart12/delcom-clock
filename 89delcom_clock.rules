@@ -31,3 +31,5 @@ ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
 # http://blog.fraggod.net/2012/06/16/proper-ish-way-to-start-long-running-systemd-service-on-udev-event-device-hotplug.html
 # http://patrakov.blogspot.fr/2011/01/writing-systemd-service-files.html
 # http://forums.opensuse.org/showthread.php/485261-Script-run-from-udev-rule-gets-killed-shortly-after-start
+
+# http://blog.fraggod.net/2015/01/12/starting-systemd-service-instance-for-device-from-udev.html
