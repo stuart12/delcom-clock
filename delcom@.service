@@ -1,18 +1,5 @@
-# This file has to be installed in /etc/systemd/system/delcom@.service
-# Don't forget to run this command when you install or modify this file:
-# sudo systemctl --system daemon-reload
-
-# Stuart Pook http://www.pook.it/
-# https://github.com/stuart12/delcom-clock
-
 [Unit]
 Description=Show time on Delcom 7 segment LED display
-BindsTo=sys%i.device
-
 [Service]
-# next step: use fork mode
-Type=simple
-ExecStart=/usr/local/lib/delcom-runner /sys%I
-
-# If you have simple setup you don't need delcom-runner, just do
-#ExecStart=/usr/local/lib/delcom-clock /sys%I
+ExecStart=/opt/github.com/stuart12/delcom-clock/delcom-clock %i
+StandardOutput=journal

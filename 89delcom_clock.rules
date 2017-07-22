@@ -1,19 +1,15 @@
 # This file should be called /etc/udev/rules.d/89delcom_clock.rules and will
-# cause udev and systemd to start delcom-clock as soon as you plug in a display
+# cause udev and systemd to start delcom-clock as soon as you plug in a display.
+# Don't forget to create /etc/systemd/system/delcom@.service to configure systemd.
 
 # Delcom Engineering, USB Numeric Display
-# Stuart Pook http://www.pook.it/ Saturday 17 May  17:41:04 CEST 2014
+# Stuart Pook http://www.pook.it/
 # https://github.com/stuart12/delcom-clock
 
-# This file was written for Debian unstable and systemd.
+# This file was written for Debian unstable July 2017, udev 234-2 and systemd 234.
 
-ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
-	ACTION=="add", \
-	DRIVER=="usbsevseg", \
-	SUBSYSTEM=="usb", \
-	PROGRAM = "/bin/sed -e s@.*@$devpath@ -e 's@-@\\x2d@g' -e s@/@-@g -e q /etc/passwd", \
-	ENV{SYSTEMD_WANTS}="delcom@$result", \
-	TAG+="systemd"
+# https://yakking.branchable.com/posts/systemd-2-udevd/
+ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", TAG+="systemd", ENV{SYSTEMD_WANTS}="delcom@%k.service"
 
 # sudo udevadm info --query=all  --attribute-walk  --path=/devices/pci0000:00/0000:00:1a.0/usb2/2-1/2-1:1.0
 
@@ -27,9 +23,3 @@ ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", \
 # udevadm info --name /dev/bus/usb/007/064
 
 # don't forget to look for the clocks in /sys/bus/usb/drivers/usbsevseg/
-
-# http://blog.fraggod.net/2012/06/16/proper-ish-way-to-start-long-running-systemd-service-on-udev-event-device-hotplug.html
-# http://patrakov.blogspot.fr/2011/01/writing-systemd-service-files.html
-# http://forums.opensuse.org/showthread.php/485261-Script-run-from-udev-rule-gets-killed-shortly-after-start
-
-# http://blog.fraggod.net/2015/01/12/starting-systemd-service-instance-for-device-from-udev.html
