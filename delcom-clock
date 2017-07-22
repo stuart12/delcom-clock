@@ -1,11 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # A program to control a Delcom Engineering USB Numeric Display (USB ID 0fc5:1227)
 # Note that this is the old display type.
 # http://www.delcomproducts.com/products_USBNDisplay.asp
-# 17 May 2014, Copyright 2010, 2014 Stuart Pook http://www.pook.it/
+# Copyright 2010, 2014, 2017 Stuart Pook http://www.pook.it/
 # https://github.com/stuart12/delcom-clock
 
-# Tested on Python 2.6.6 and Linux 2.6.34, 2.6.37, 3.14
+# Tested on Python and Linux 2.6.34, 2.6.37, 3.14, 4.9
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -70,7 +70,7 @@ start_off = False
 try:
 	opts, args = getopt.getopt(sys.argv[1:], "v", options)
 except getopt.GetoptError:
-	print "help"
+	print("help")
 	usage()
 for o, a in opts:
 	if o in ("--fork"):
@@ -99,7 +99,7 @@ for o, a in opts:
 	elif o in ("--noverbose"):
 		debug = None
 	else:
-		print "bad option", o
+		print("bad option", o)
 		usage()
 
 if not args:
@@ -151,8 +151,8 @@ try:
 	set_parameter(device, "mode_lsb", "255", debug)
 	set_parameter(device, "textmode", "ascii", debug)
 
-	text = open(os.path.join(device, "text"), "w", buffering=0)
-	decimals = open(os.path.join(device, "decimals"), "w", buffering=0)
+	text = open(os.path.join(device, "text"), "w", buffering=1)
+	decimals = open(os.path.join(device, "decimals"), "w", buffering=1)
 except Exception as e:
 	syslog.syslog(syslog.LOG_ERR,  short_device + ": initialisation error: " + str(e))
 	raise
@@ -162,7 +162,7 @@ time.sleep(command_gap / 1000.0)
 
 length = 8
 try:
-	decimals.write("01" + "0" * (length - 2) + "\n")
+	print("01" + "0" * (length - 2), file=decimals)
 	time.sleep(0.5 +command_gap / 1000.0)
 except IOError as e:
 	length = 6
@@ -172,15 +172,15 @@ time.sleep(command_gap / 1000.0)
 
 try:
 	if start_off:
-		decimals.write("1" + "0" * (length - 1) + "\n")
+		print("1" + "0" * (length - 1), file=decimals)
 		time.sleep(0.75 + command_gap / 1000.0)
-		decimals.write("0" * length + "\n")
+		print("0" * length, file=decimals)
 	else:
-		text.write("8" * length + "\n")
+		print("8" * length, file=text)
 		time.sleep(command_gap / 1000.0 )
-		decimals.write("1" * length + "\n")
+		print("1" * length, file=decimals)
 		time.sleep(0.75 +command_gap / 1000.0)
-		decimals.write(dots[-length:] + "\n")
+		print(dots[-length:], file=decimals)
 except Exception as e:
 	syslog.syslog(syslog.LOG_ERR,  "error on " + device + ": " + str(e))
 	raise
@@ -191,7 +191,7 @@ time.sleep(command_gap / 1000.0)
 try:
 	if control != None:
 		if not os.path.exists(control):
-			os.mkfifo(control, 0600)
+			os.mkfifo(control, 0o600)
 			if chown != None:
 				uids = pwd.getpwnam(chown)
 				os.chown(control, uids.pw_uid, uids.pw_gid)
@@ -215,7 +215,7 @@ while True:
 	now = time.time()
 	localtime = time.localtime(now)
 	out = time.strftime(format, localtime)[-length:]
-	text.write(out if on else "" + '\n')
+	print(out if on else "", file=text)
 	# this line is the hardest to get right
 	delay = update - now % 60 % update
 	rdelay =  int(math.ceil(delay * 1000))
@@ -227,25 +227,29 @@ while True:
 	if read != []:
 		message(debug, "something to read")
 		s = os.read(read[0][0],  100)
-		message(debug, "read " + s)
+		message(debug, "read " + str(s))
 		old_on = on
 		for c in s:
-			if c == "0":
+			if c == ord("0"):
 				on = False
-			elif c == "1":
+			elif c == ord("1"):
 				on = True
-			elif c == '~':
+			elif c == ord('~'):
 				on = not on
-			elif c == '!':
-				messages = ["\n", out]
+			elif c == ord('!'):
+				messages = ["", out]
 				for m in [not on, on]:
 					time.sleep(4 * command_gap / 1000.0)
-					text.write(messages[int(m)] + "\n")
+					print(messages[int(m)], file=text)
+			elif c == ord('\n'):
+				pass
+			else:
+				message(debug, "unexpected read " + str(c))
 		time.sleep(command_gap / 1000.0)
 		if old_on != on:
 			if on:
-				decimals.write(dots[-length:] + "\n")
+				print(dots[-length:], file=decimals)
 			else:
-				decimals.write("\n")
+				print(file=decimals)
 			message(debug, "powered " + str(on))
 			time.sleep(command_gap / 1000.0)
