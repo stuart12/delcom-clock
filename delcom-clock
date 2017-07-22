@@ -33,31 +33,31 @@ import syslog
 import signal
 
 def message(debug, mess):
-	if debug != None:
-		debug.write(mess + "\n")
-		debug.flush()
+    if debug != None:
+        debug.write(mess + "\n")
+        debug.flush()
 
 def set_parameter(device, file, value, debug):
-	message(debug, "set_parameter(%s, %s, %s)" % (device, file, value))
-	name = os.path.join(device, file)
-	message(debug, "setting " + name + " to " + value)
-	f = open(name, "w")
-	f.write(value + "\n")
-	f.close()
-	message(debug, "set " + name + " to " + value)
+    message(debug, "set_parameter(%s, %s, %s)" % (device, file, value))
+    name = os.path.join(device, file)
+    message(debug, "setting " + name + " to " + value)
+    f = open(name, "w")
+    f.write(value + "\n")
+    f.close()
+    message(debug, "set " + name + " to " + value)
 def usage():
-	sys.exit("usage: " + myname + " " + str(options))
+    sys.exit("usage: " + myname + " " + str(options))
 
 myname = os.path.basename(sys.argv[0])
 verbose = False
 seconds = False
 fork = False
 options = [ "usbsevseg=", "chown=", "control=", "syslog", "decimals=", "debug=", "format=", "update=", "fork",
-		"delay=",
-		"verbose",
-		"off",
-		"noverbose",
-		]
+        "delay=",
+        "verbose",
+        "off",
+        "noverbose",
+        ]
 dots = "10100"
 format = "%H%M%S"
 update = 1
@@ -68,188 +68,188 @@ do_syslog = False
 usbsevseg = "/sys/bus/usb/drivers/usbsevseg"
 start_off = False
 try:
-	opts, args = getopt.getopt(sys.argv[1:], "v", options)
+    opts, args = getopt.getopt(sys.argv[1:], "v", options)
 except getopt.GetoptError:
-	print("help")
-	usage()
+    print("help")
+    usage()
 for o, a in opts:
-	if o in ("--fork"):
-		fork = True
-		do_syslog = True
-	elif o in ("--chown"):
-		chown = a
-	elif o in ("--decimals"):
-		dots = a
-	elif o in ("--format"):
-		format = a
-	elif o in ("--usbsevseg"):
-		usbsevseg = a
-	elif o in ("--control"):
-		control = a
-	elif o in ("--syslog"):
-		do_syslog = True
-	elif o in ("--debug"):
-		debug = open(a, "w")
-	elif o in ("--update"):
-		update = int(a)
-	elif o in ("-v", "--verbose"):
-		debug = open("/dev/stdout", "w")
-	elif o in ("--off"):
-		start_off = True
-	elif o in ("--noverbose"):
-		debug = None
-	else:
-		print("bad option", o)
-		usage()
+    if o in ("--fork"):
+        fork = True
+        do_syslog = True
+    elif o in ("--chown"):
+        chown = a
+    elif o in ("--decimals"):
+        dots = a
+    elif o in ("--format"):
+        format = a
+    elif o in ("--usbsevseg"):
+        usbsevseg = a
+    elif o in ("--control"):
+        control = a
+    elif o in ("--syslog"):
+        do_syslog = True
+    elif o in ("--debug"):
+        debug = open(a, "w")
+    elif o in ("--update"):
+        update = int(a)
+    elif o in ("-v", "--verbose"):
+        debug = open("/dev/stdout", "w")
+    elif o in ("--off"):
+        start_off = True
+    elif o in ("--noverbose"):
+        debug = None
+    else:
+        print("bad option", o)
+        usage()
 
 if not args:
-	usage()
+    usage()
 
 device = os.path.join(usbsevseg, args[0])
 short_device = os.path.basename(device)
 
 if do_syslog:
-	syslog.openlog("delcom-clock",  0,  syslog.LOG_DAEMON)
-	syslog.syslog(syslog.LOG_INFO, "%s: starting %s (%s)" % (short_device, device, args[0]))
+    syslog.openlog("delcom-clock",  0,  syslog.LOG_DAEMON)
+    syslog.syslog(syslog.LOG_INFO, "%s: starting %s (%s)" % (short_device, device, args[0]))
 if debug:
-	sys.stderr = debug
-	sys.stdout = debug
-	debug.write("device " + short_device + "\n")
+    sys.stderr = debug
+    sys.stdout = debug
+    debug.write("device " + short_device + "\n")
 
 def signal_handler(signal, frame):
-	syslog.syslog(syslog.LOG_INFO, "%s: exiting on signal %d" % (short_device, signal))
-	sys.exit(1)
+    syslog.syslog(syslog.LOG_INFO, "%s: exiting on signal %d" % (short_device, signal))
+    sys.exit(1)
 for s in [ signal.SIGINT, signal.SIGTERM, signal.SIGHUP ]:
-	signal.signal(s, signal_handler)
+    signal.signal(s, signal_handler)
 
 poller = select.poll()
 
 try:
-	level = os.path.join(device, "../power/level")
-	message(debug, "opening " + level)
-	power = open(level)
-	message(debug, "opened " + level)
-	power_required = "auto\n"
-	old_power = power.readline()
-	power.close()
-	if fork and os.fork() != 0:
-		sys.exit(0)
-		
-	if old_power != power_required:
-		message(debug, "power was " + old_power)
-		power = open(level, "w")
-		message(debug, "opened " + level)
-		power.write(power_required)
-		power.close()
-		magic_delay = 5.0
-		message(debug, "sleeping " + str(magic_delay))
-		time.sleep(magic_delay)
-		message(debug, "slept " + str(magic_delay))
-		
-	set_parameter(device, "powered", "1", debug)
-	set_parameter(device, "mode_msb", "8", debug)
-	set_parameter(device, "mode_lsb", "255", debug)
-	set_parameter(device, "textmode", "ascii", debug)
+    level = os.path.join(device, "../power/level")
+    message(debug, "opening " + level)
+    power = open(level)
+    message(debug, "opened " + level)
+    power_required = "auto\n"
+    old_power = power.readline()
+    power.close()
+    if fork and os.fork() != 0:
+        sys.exit(0)
+        
+    if old_power != power_required:
+        message(debug, "power was " + old_power)
+        power = open(level, "w")
+        message(debug, "opened " + level)
+        power.write(power_required)
+        power.close()
+        magic_delay = 5.0
+        message(debug, "sleeping " + str(magic_delay))
+        time.sleep(magic_delay)
+        message(debug, "slept " + str(magic_delay))
+        
+    set_parameter(device, "powered", "1", debug)
+    set_parameter(device, "mode_msb", "8", debug)
+    set_parameter(device, "mode_lsb", "255", debug)
+    set_parameter(device, "textmode", "ascii", debug)
 
-	text = open(os.path.join(device, "text"), "w", buffering=1)
-	decimals = open(os.path.join(device, "decimals"), "w", buffering=1)
+    text = open(os.path.join(device, "text"), "w", buffering=1)
+    decimals = open(os.path.join(device, "decimals"), "w", buffering=1)
 except Exception as e:
-	syslog.syslog(syslog.LOG_ERR,  short_device + ": initialisation error: " + str(e))
-	raise
+    syslog.syslog(syslog.LOG_ERR,  short_device + ": initialisation error: " + str(e))
+    raise
 
 command_gap = 25
 time.sleep(command_gap / 1000.0)
 
 length = 8
 try:
-	print("01" + "0" * (length - 2), file=decimals)
-	time.sleep(0.5 +command_gap / 1000.0)
+    print("01" + "0" * (length - 2), file=decimals)
+    time.sleep(0.5 +command_gap / 1000.0)
 except IOError as e:
-	length = 6
-	message(debug, "set length to %d" % length)
+    length = 6
+    message(debug, "set length to %d" % length)
 
 time.sleep(command_gap / 1000.0)
 
 try:
-	if start_off:
-		print("1" + "0" * (length - 1), file=decimals)
-		time.sleep(0.75 + command_gap / 1000.0)
-		print("0" * length, file=decimals)
-	else:
-		print("8" * length, file=text)
-		time.sleep(command_gap / 1000.0 )
-		print("1" * length, file=decimals)
-		time.sleep(0.75 +command_gap / 1000.0)
-		print(dots[-length:], file=decimals)
+    if start_off:
+        print("1" + "0" * (length - 1), file=decimals)
+        time.sleep(0.75 + command_gap / 1000.0)
+        print("0" * length, file=decimals)
+    else:
+        print("8" * length, file=text)
+        time.sleep(command_gap / 1000.0 )
+        print("1" * length, file=decimals)
+        time.sleep(0.75 +command_gap / 1000.0)
+        print(dots[-length:], file=decimals)
 except Exception as e:
-	syslog.syslog(syslog.LOG_ERR,  "error on " + device + ": " + str(e))
-	raise
+    syslog.syslog(syslog.LOG_ERR,  "error on " + device + ": " + str(e))
+    raise
 
 #set_parameter(device, "decimals", decimals, debug)
 time.sleep(command_gap / 1000.0)
 
 try:
-	if control != None:
-		if not os.path.exists(control):
-			os.mkfifo(control, 0o600)
-			if chown != None:
-				uids = pwd.getpwnam(chown)
-				os.chown(control, uids.pw_uid, uids.pw_gid)
-				message(debug, "chown " + control + " to " + str(uids.pw_uid) + ":" + str(uids.pw_gid))
-		message(debug, "opening for read " + control)
-		control_fd = os.open(control, os.O_RDONLY | os.O_NONBLOCK)
-		if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
-			sys.exit(control + " is not a pipe");
-		poller.register(control_fd)
-		keep_it_open_so_do_not_block = os.open(control, os.O_WRONLY)
-		message(debug, "opened " + control)
+    if control != None:
+        if not os.path.exists(control):
+            os.mkfifo(control, 0o600)
+            if chown != None:
+                uids = pwd.getpwnam(chown)
+                os.chown(control, uids.pw_uid, uids.pw_gid)
+                message(debug, "chown " + control + " to " + str(uids.pw_uid) + ":" + str(uids.pw_gid))
+        message(debug, "opening for read " + control)
+        control_fd = os.open(control, os.O_RDONLY | os.O_NONBLOCK)
+        if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
+            sys.exit(control + " is not a pipe");
+        poller.register(control_fd)
+        keep_it_open_so_do_not_block = os.open(control, os.O_WRONLY)
+        message(debug, "opened " + control)
 except Exception as e:
-	syslog.syslog(syslog.LOG_ERR, "error setting up control " + control + ": " + str(e))
-	raise
+    syslog.syslog(syslog.LOG_ERR, "error setting up control " + control + ": " + str(e))
+    raise
 
 message(debug, "starting " + format + " " + str(update))
 if do_syslog:
-	syslog.syslog(syslog.LOG_INFO, "%s: updating %s every %d seconds controlled by %s" % (short_device, format, update, control))
+    syslog.syslog(syslog.LOG_INFO, "%s: updating %s every %d seconds controlled by %s" % (short_device, format, update, control))
 on = not start_off
 while True:
-	now = time.time()
-	localtime = time.localtime(now)
-	out = time.strftime(format, localtime)[-length:]
-	print(out if on else "", file=text)
-	# this line is the hardest to get right
-	delay = update - now % 60 % update
-	rdelay =  int(math.ceil(delay * 1000))
-	if rdelay < command_gap + 1:
-		message(debug, "rdelay too small " + str(rdelay))
-		rdelay = command_gap
-	message(debug, '[' + out + "] delay=" + str(delay) + " " + str(now) + " " + str(localtime.tm_sec) + ' ' + str(now % 60) + " " + str(rdelay))
-	read = poller.poll(rdelay)
-	if read != []:
-		message(debug, "something to read")
-		s = os.read(read[0][0],  100)
-		message(debug, "read " + str(s))
-		old_on = on
-		for c in s:
-			if c == ord("0"):
-				on = False
-			elif c == ord("1"):
-				on = True
-			elif c == ord('~'):
-				on = not on
-			elif c == ord('!'):
-				messages = ["", out]
-				for m in [not on, on]:
-					time.sleep(4 * command_gap / 1000.0)
-					print(messages[int(m)], file=text)
-			elif c == ord('\n'):
-				pass
-			else:
-				message(debug, "unexpected read " + str(c))
-		time.sleep(command_gap / 1000.0)
-		if old_on != on:
-			if on:
-				print(dots[-length:], file=decimals)
-			else:
-				print(file=decimals)
-			message(debug, "powered " + str(on))
-			time.sleep(command_gap / 1000.0)
+    now = time.time()
+    localtime = time.localtime(now)
+    out = time.strftime(format, localtime)[-length:]
+    print(out if on else "", file=text)
+    # this line is the hardest to get right
+    delay = update - now % 60 % update
+    rdelay =  int(math.ceil(delay * 1000))
+    if rdelay < command_gap + 1:
+        message(debug, "rdelay too small " + str(rdelay))
+        rdelay = command_gap
+    message(debug, '[' + out + "] delay=" + str(delay) + " " + str(now) + " " + str(localtime.tm_sec) + ' ' + str(now % 60) + " " + str(rdelay))
+    read = poller.poll(rdelay)
+    if read != []:
+        message(debug, "something to read")
+        s = os.read(read[0][0],  100)
+        message(debug, "read " + str(s))
+        old_on = on
+        for c in s:
+            if c == ord("0"):
+                on = False
+            elif c == ord("1"):
+                on = True
+            elif c == ord('~'):
+                on = not on
+            elif c == ord('!'):
+                messages = ["", out]
+                for m in [not on, on]:
+                    time.sleep(4 * command_gap / 1000.0)
+                    print(messages[int(m)], file=text)
+            elif c == ord('\n'):
+                pass
+            else:
+                message(debug, "unexpected read " + str(c))
+        time.sleep(command_gap / 1000.0)
+        if old_on != on:
+            if on:
+                print(dots[-length:], file=decimals)
+            else:
+                print(file=decimals)
+            message(debug, "powered " + str(on))
+            time.sleep(command_gap / 1000.0)
