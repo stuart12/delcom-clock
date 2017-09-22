@@ -1,0 +1,13 @@
+# Install this file as /etc/systemd/system/delcom@.service
+# Don't forget to run: sudo systemctl --system daemon-reload
+# Requires /etc/udev/rules.d/89delcom_clock.rules as well.
+
+# Delcom Engineering, USB Numeric Display
+# Stuart Pook http://www.pook.it/
+# https://github.com/stuart12/delcom-clock
+
+[Unit]
+Description=Show time and date on Delcom 7 segment LED display
+[Service]
+StandardOutput=journal
+ExecStart=/opt/github.com/stuart12/delcom-clock/delcom-clock --verbose --control /run/led-bedroom --chown homeassistant --decimals 10000101 --update 60 --format "%%m%%d %%k%%M" %i
