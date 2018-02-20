@@ -9,5 +9,5 @@
 [Unit]
 Description=Show time on Delcom 7 segment LED display
 [Service]
-ExecStart=/opt/github.com/stuart12/delcom-clock/delcom-clock %i
+ExecStart=/usr/local/lib/delcom-clock %i
 StandardOutput=journal
