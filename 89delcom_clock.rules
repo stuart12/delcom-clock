@@ -1,15 +1,22 @@
-# This file should be called /etc/udev/rules.d/89delcom_clock.rules and will
+# This file should be called /etc/udev/rules.d/89-delcom_clock.rules and will
 # cause udev and systemd to start delcom-clock as soon as you plug in a display.
 # Don't forget to create /etc/systemd/system/delcom@.service to configure systemd.
+# to reload run: sudo systemctl --system daemon-reload
 
 # Delcom Engineering, USB Numeric Display
 # Stuart Pook http://www.pook.it/
 # https://github.com/stuart12/delcom-clock
 
-# This file was written for Debian unstable July 2017, udev 234-2 and systemd 234.
+# see udev devices
+# udevadm info --export-db
+# man 5 systemd.device
+#
+# This file was written for Debian stretch (systemd 232-25+deb9u1) & unstable (systemd 237).
 
 # https://yakking.branchable.com/posts/systemd-2-udevd/
-ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", TAG+="systemd", ENV{SYSTEMD_WANTS}="delcom@%k.service"
+#ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", TAG+="systemd", ENV{SYSTEMD_WANTS}="delcom@.service"
+# https://github.com/systemd/systemd/blob/master/NEWS
+DRIVER=="usbsevseg", ACTION!="remove", ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", TAG+="systemd", ENV{SYSTEMD_WANTS}="delcom@%k.service"
 
 # sudo udevadm info --query=all  --attribute-walk  --path=/devices/pci0000:00/0000:00:1a.0/usb2/2-1/2-1:1.0
 
