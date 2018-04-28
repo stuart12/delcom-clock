@@ -16,7 +16,7 @@
 # https://yakking.branchable.com/posts/systemd-2-udevd/
 #ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", TAG+="systemd", ENV{SYSTEMD_WANTS}="delcom@.service"
 # https://github.com/systemd/systemd/blob/master/NEWS
-DRIVER=="usbsevseg", ACTION!="remove", ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", TAG+="systemd", ENV{SYSTEMD_WANTS}="delcom@%k.service"
+SUBSYSTEM=="usb", ACTION!="remove", ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", TAG+="systemd", ENV{SYSTEMD_WANTS}+="delcom@%k.service"
 
 # sudo udevadm info --query=all  --attribute-walk  --path=/devices/pci0000:00/0000:00:1a.0/usb2/2-1/2-1:1.0
 
