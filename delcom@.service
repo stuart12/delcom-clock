@@ -7,7 +7,8 @@
 # https://github.com/stuart12/delcom-clock
 
 [Unit]
-Description=Show time on Delcom 7 segment LED display
+# https://github.com/six-k/automount-usb/blob/master/usb-mount%40.service
+Description=Show time on Delcom 7 segment LED display %I (%i)
 [Service]
-ExecStart=/usr/local/lib/delcom-clock %i
+ExecStart=/usr/local/lib/delcom-clock --verbose --syslog %i
 StandardOutput=journal
