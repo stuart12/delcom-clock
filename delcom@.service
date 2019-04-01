@@ -4,11 +4,11 @@
 
 # Delcom Engineering, USB Numeric Display
 # Stuart Pook http://www.pook.it/
-# https://github.com/stuart12/delcom-clock
 
 [Unit]
 # https://github.com/six-k/automount-usb/blob/master/usb-mount%40.service
 Description=Show time on Delcom 7 segment LED display %I (%i)
+Documentation=https://github.com/stuart12/delcom-clock
 
 BindsTo=sys-subsystem-delcom-%i.device
 After=sys-subsystem-delcom-%i.device
