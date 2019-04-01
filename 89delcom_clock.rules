@@ -17,7 +17,7 @@
 #ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", TAG+="systemd", ENV{SYSTEMD_WANTS}="delcom@.service"
 # https://github.com/systemd/systemd/blob/master/NEWS
 # https://github.com/systemd/systemd/issues/7587
-ACTION=="add", SUBSYSTEM=="usb", DRIVER=="usbsevseg", ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", TAG+="systemd", ENV{SYSTEMD_WANTS}+="delcom@%k.service", ENV{SYSTEMD_ALIAS}+="/sys/subsystem/delcom/%k"
+ACTION=="add", SUBSYSTEM=="usb", DRIVER=="usbsevseg", ATTRS{idVendor}=="0fc5", ATTRS{idProduct}=="1227", PROGRAM="/bin/sh -c 'echo %k | tr - /'", TAG+="systemd", ENV{SYSTEMD_WANTS}+="delcom@%k.service", ENV{SYSTEMD_ALIAS}+="/sys/subsystem/delcom/%c"
 ACTION=="remove", SUBSYSTEM=="usb", ENV{PRODUCT}=="fc5/1227/*", TAG+="systemd"
 
 #SUBSYSTEM=="usb", DRIVER=="usbsevseg", ENV{PRODUCT}=="fc5/1227/10", TAG+="systemd", ENV{SYSTEMD_WANTS}+="delcom@%k.service", ENV{SYSTEMD_ALIAS}+="/sys/subsystem/delcom/$kernel"

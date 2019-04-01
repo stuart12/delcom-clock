@@ -9,6 +9,9 @@
 [Unit]
 # https://github.com/six-k/automount-usb/blob/master/usb-mount%40.service
 Description=Show time on Delcom 7 segment LED display %I (%i)
+
+BindsTo=sys-subsystem-delcom-%i.device
+After=sys-subsystem-delcom-%i.device
+
 [Service]
-ExecStart=/usr/local/lib/delcom-clock --verbose --syslog %i
-StandardOutput=journal
+ExecStart=/opt/github.com/stuart12/delcom-clock/delcom-clock %i
