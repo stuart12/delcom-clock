@@ -9,5 +9,29 @@
 [Unit]
 Description=Show time and date on Delcom 7 segment LED display
 [Service]
-StandardOutput=journal
-ExecStart=/opt/github.com/stuart12/delcom-clock/delcom-clock --control /run/led-bedroom --chown homeassistant --decimals 10000101 --update 60 --format "%%m%%d %%k%%M" %i
+WorkingDirectory=/
+Environment=HOME=%t/%p
+RuntimeDirectory=%p
+RuntimeDirectoryMode=0755
+ExecStartPre=+/bin/sh -xc 'f="../power/level powered mode_msb mode_lsb textmode text decimals"; cd /sys/bus/usb/drivers/usbsevseg/%i && chgrp delcom $$f && chmod 664 $$f'
+ExecStartPre=/usr/bin/pip3 install paho-mqtt
+ExecStart=/opt/github.com/stuart12/delcom-clock/delcom-clock -v --mode 660 --control %t/%p/led-bedroom --update 60 --pformat "{:3.1f} {:02d}.{:02d}" --parg mqtt:home/bedroom/temperature --parg time:hour --parg time:min %i
+
+User=delcom
+Group=homeassistant
+SupplementaryGroups=delcom
+DevicePolicy=closed
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=false
+ProtectControlGroups=true
+CapabilityBoundingSet=
+NoNewPrivileges=true
+SystemCallFilter=~@resources @privileged @obsolete @mount @clock @cpu-emulation @debug @keyring @module @raw-io
+ProtectKernelModules=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictNamespaces=true
+
+TimeoutStopSec=2s
