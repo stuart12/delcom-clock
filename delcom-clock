@@ -28,92 +28,165 @@ import time
 import select
 import stat
 import math
+import logging
 import pwd
 import syslog
 import signal
 import functools
 
+def excepthook(*args):
+  logging.getLogger().error('Uncaught exception:', exc_info=args)
+sys.excepthook = excepthook
+
 def myname():
     return sys.argv[0]
 
-def message(debug, mess):
-    if debug != None:
-        debug.write(mess + "\n")
-        debug.flush()
+def message(mess):
+    logging.debug(mess)
 
-def error(do_syslog, debug, mess):
-    message(debug, mess)
+def error(do_syslog, mess):
+    logging.error(mess)
     print(myname(), mess, file=sys.stderr)
     if do_syslog:
         syslog.syslog(syslog.LOG_ERR, mess)
 
-def set_parameter(device, parameter, value, debug):
-    message(debug, "set_parameter(%s, %s, %s)" % (device, parameter, value))
+def set_parameter(device, parameter, value):
+    message("set_parameter(%s, %s, %s)" % (device, parameter, value))
     name = os.path.join(device, parameter)
-    message(debug, "setting " + name + " to " + value)
+    message("setting " + name + " to " + value)
     f = open(name, "w")
     f.write(value + "\n")
     f.close()
-    message(debug, "set " + name + " to " + value)
+    message("set " + name + " to " + value)
 
-def signal_handler(short_device, do_syslog, debug, signal, frame):
+def signal_handler(short_device, do_syslog, signal, frame):
     mess = "%s: exiting on signal %d" % (short_device, signal)
     if do_syslog:
         syslog.syslog(syslog.LOG_INFO, mess)
     else:
-        message(debug, mess)
+        message(mess)
     sys.exit(1)
 
 def get_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description="show the time on a Delcom Engineering USB Numeric Display")
+    parser.set_defaults(loglevel='warn')
+    parser.add_argument("-v", "--verbose", dest='loglevel', action="store_const", const='debug', help="debug loglevel")
+    parser.add_argument("-l", "--loglevel", metavar="LEVEL", help="set logging level")
     parser.add_argument("--usbsevseg", default="/sys/bus/usb/drivers/usbsevseg", metavar="PATH", help="sys path to displays")
     parser.add_argument("--chown", default=None, metavar="USER", help="owner of control pipe")
     parser.add_argument("--control", default=None, metavar="PATH", help="named pipe for control")
     parser.add_argument('-s', "--syslog", action="store_true", help="send errors to syslog")
-    parser.add_argument('-v', "--verbose", action="store_true", help="verbose")
     parser.add_argument("--decimals", default="10100", metavar="PATTERN", help="position of dots")
-    parser.add_argument("--debug", default=None, metavar="PATH", help="file for debug messages")
-    parser.add_argument("--format", default="%H%M%S", metavar="PATTERN", help="strftime pattern for display")
     parser.add_argument("--update", type=int, metavar="SECONDS", default=1, help="delay between updates")
+    parser.add_argument("--format", metavar="PATTERN", help="strftime pattern for display")
+    parser.add_argument("--pformat", default="{:2d}{:2d}{:2d}", metavar="FORMAT", help="python format pattern for display")
+    parser.add_argument("--parg", metavar="TYPE:KEY", action='append', help="what value to format")
     parser.add_argument("--fork", action="store_true", help="fork")
     parser.add_argument('--off', action="store_true", help="start off")
+    parser.add_argument('-n', '--only_format', action="store_true", help="just format the output string")
+    parser.add_argument("--mqttbroker", default="localhost", help="mqtt broker")
+    parser.add_argument("--mqttclientid", default="delcom_clock", help="client_id for mqtt broker")
+    parser.add_argument("--mqttuser", help="mqtt password")
+    parser.add_argument("--mqttpassword", help="mqtt password")
+    parser.add_argument("--mqttpasswdfile", metavar="FILENAME", help="file containing mqtt password")
     parser.add_argument('display', nargs=1, help='display name')
     options = parser.parse_args()
+    if options.parg is None:
+        options.parg = ['time:hour', 'time:min', 'time:sec']
     return options
 
+def get_value(pattern, localtime, mqtt):
+    type, id = pattern.split(':', 1)
+    if type == 'time':
+        return getattr(localtime, 'tm_' + id)
+    if type == 'mqtt':
+        logging.debug("mqqt value is %s (id=%s)", mqtt, id)
+        try:
+            return mqtt[id]
+        except KeyError:
+            logging.warning('no mqtt payload received for %s', id)
+            return 0.01
+
+def format_output(localtime, format, pformat, pargs, mqtt):
+    if format:
+        return time.strftime(format, localtime)[-length:]
+    args = [ get_value(c, localtime, mqtt) for c in pargs ]
+    logging.debug("format %s (%s)", pformat, args)
+    return pformat.format(*args)
+
+def split_text(now, format, pformat, pargs, mqtt):
+    text = format_output(now, format, pformat, pargs, mqtt)
+    str = ''
+    decimals = ''
+    pending = ''
+    for c in text:
+        if c == '.':
+            assert pending != ''
+            pending = '1'
+        else:
+            decimals += pending
+            str += c
+            pending = '0'
+    decimals += pending
+    assert len(decimals) == len(str), "len(%s) != len(%s)" % (decimals, str)
+    return str, decimals, text
+
+def on_message(client, userdata, message):
+    logging.debug("received a message on %s %s (userdata %s)", message.topic, message.payload, userdata)
+    userdata[message.topic] = float(message.payload)
+
+def mqtt_setup(mqttbroker, mqttuser, mqttclientid, mqttpassword, mqttpasswdfile, pargs):
+    topics = [s[1] for u in pargs for s in (u.split(':'), ) if s[0] == 'mqtt']
+    logging.debug("mqtt topics %s", topics)
+    if not topics:
+        return None
+    import paho.mqtt.client as mqttClient
+    client = mqttClient.Client(client_id=mqttclientid, userdata=mqttbroker)
+    client.username_pw_set(mqttuser, password=mqttpassword)
+    logging.debug("connecting to mqtt broker %s as %s with%s password", mqttbroker, mqttuser, "" if mqttpassword else "out")
+    client.connect(mqttbroker)
+    logging.debug("connected to mqtt broker %s as %s", mqttbroker, mqttuser)
+    return_array = {}
+    client.user_data_set(return_array)
+    for t in topics:
+        client.subscribe(t)
+        client.message_callback_add(t, on_message)
+    client.loop_start()
+    return return_array
+
 def run(options):
+    mqtt = mqtt_setup(options.mqttbroker, options.mqttuser, options.mqttclientid, options.mqttpassword, options.mqttpasswdfile, options.parg)
+    if options.only_format:
+        if mqtt is not None: # hack
+            time.sleep(5)
+        text, decimals, full = split_text(time.localtime(time.time()), options.format, options.pformat, options.parg, mqtt)
+        print(text, decimals, full)
+        exit(0)
+
     do_syslog = options.syslog or options.fork
 
     device = os.path.join(options.usbsevseg, options.display[0])
     short_device = os.path.basename(device)
 
-    if options.debug:
-        debug = open(options.debug, "w")
-        sys.stderr = debug
-        sys.stdout = debug
-        debug.write("device " + short_device + "\n")
-    elif options.verbose:
-        debug = sys.stderr
-    else:
-        debug = None
+    logging.debug("device " + short_device + "\n")
 
-    message(debug, "starting " + device)
+    message("starting " + device)
 
     if do_syslog:
         syslog.openlog("delcom-clock",  0,  syslog.LOG_DAEMON)
         syslog.syslog(syslog.LOG_INFO, "%s: starting %s (%s)" % (short_device, device, options.display[0]))
 
     for s in [ signal.SIGINT, signal.SIGTERM, signal.SIGHUP ]:
-        signal.signal(s, functools.partial(signal_handler, short_device, do_syslog, debug))
+        signal.signal(s, functools.partial(signal_handler, short_device, do_syslog))
 
     poller = select.poll()
 
     try:
         level = os.path.join(device, "../power/level")
-        message(debug, "opening " + level)
+        message("opening " + level)
         power = open(level)
-        message(debug, "opened " + level)
+        message("opened " + level)
         power_required = "auto\n"
         old_power = power.readline()
         power.close()
@@ -121,20 +194,20 @@ def run(options):
             sys.exit(0)
             
         if old_power != power_required:
-            message(debug, "power was " + old_power)
+            message("power was " + old_power)
             power = open(level, "w")
-            message(debug, "opened " + level)
+            message("opened " + level)
             power.write(power_required)
             power.close()
             magic_delay = 5.0
-            message(debug, "sleeping " + str(magic_delay))
+            message("sleeping " + str(magic_delay))
             time.sleep(magic_delay)
-            message(debug, "slept " + str(magic_delay))
+            message("slept " + str(magic_delay))
             
-        set_parameter(device, "powered", "1", debug)
-        set_parameter(device, "mode_msb", "8", debug)
-        set_parameter(device, "mode_lsb", "255", debug)
-        set_parameter(device, "textmode", "ascii", debug)
+        set_parameter(device, "powered", "1")
+        set_parameter(device, "mode_msb", "8")
+        set_parameter(device, "mode_lsb", "255")
+        set_parameter(device, "textmode", "ascii")
 
         text_filename = os.path.join(device, "text")
         text = open(text_filename, "w", buffering=1)
@@ -152,7 +225,7 @@ def run(options):
         time.sleep(0.5 +command_gap / 1000.0)
     except IOError as e:
         length = 6
-        message(debug, "set length to %d" % length)
+        message("set length to %d" % length)
 
     time.sleep(command_gap / 1000.0)
 
@@ -171,7 +244,7 @@ def run(options):
         syslog.syslog(syslog.LOG_ERR,  "error on " + device + ": " + str(e))
         raise
 
-    #set_parameter(device, "decimals", decimals, debug)
+    #set_parameter(device, "decimals", decimals)
     time.sleep(command_gap / 1000.0)
 
     try:
@@ -181,44 +254,46 @@ def run(options):
                 if options.chown != None:
                     uids = pwd.getpwnam(options.chown)
                     os.chown(options.control, uids.pw_uid, uids.pw_gid)
-                    message(debug, "chown " + options.control + " to " + str(uids.pw_uid) + ":" + str(uids.pw_gid))
-            message(debug, "opening for read " + options.control)
+                    message("chown " + options.control + " to " + str(uids.pw_uid) + ":" + str(uids.pw_gid))
+            message("opening for read " + options.control)
             control_fd = os.open(options.control, os.O_RDONLY | os.O_NONBLOCK)
             if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
                 sys.exit(options.control + " is not a pipe");
             poller.register(control_fd)
             keep_it_open_so_do_not_block = os.open(options.control, os.O_WRONLY)
-            message(debug, "opened " + options.control)
+            message("opened " + options.control)
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, "error setting up control " + options.control + ": " + str(e))
         raise
 
-    message(debug, "starting " + options.format + " " + str(options.update))
+    logging.debug("starting %s every %f", options.format, options.update)
     if do_syslog:
         syslog.syslog(syslog.LOG_INFO, "%s: updating %s every %d seconds controlled by %s" % (short_device, options.format, options.update, options.control))
     on = not options.off
     while True:
         now = time.time()
         localtime = time.localtime(now)
-        out = time.strftime(options.format, localtime)[-length:]
+        out, dots, _ = split_text(localtime, options.format, options.pformat, options.parg, mqtt)
         try:
             print(out if on else "", file=text)
+            time.sleep(command_gap / 1000.0)
+            print(dots if on else "", file=decimals)
         except OSError as ex:
-            error(do_syslog, debug, "failed to write: %s: %s" % (text_filename, ex))
+            error(do_syslog, "failed to write: %s: %s" % (text_filename, ex))
             raise
 
         # this line is the hardest to get right
         delay = options.update - now % 60 % options.update
         rdelay =  int(math.ceil(delay * 1000))
         if rdelay < command_gap + 1:
-            message(debug, "rdelay too small " + str(rdelay))
+            message("rdelay too small " + str(rdelay))
             rdelay = command_gap
-        message(debug, '[' + out + "] delay=" + str(delay) + " " + str(now) + " " + str(localtime.tm_sec) + ' ' + str(now % 60) + " " + str(rdelay))
+        message('[' + out + "] delay=" + str(delay) + " " + str(now) + " " + str(localtime.tm_sec) + ' ' + str(now % 60) + " " + str(rdelay))
         read = poller.poll(rdelay)
         if read != []:
-            message(debug, "something to read")
+            message("something to read")
             s = os.read(read[0][0],  100)
-            message(debug, "read " + str(s))
+            message("read " + str(s))
             old_on = on
             for c in s:
                 if c == ord("0"):
@@ -235,18 +310,17 @@ def run(options):
                 elif c == ord('\n'):
                     pass
                 else:
-                    message(debug, "unexpected read " + str(c))
+                    message("unexpected read " + str(c))
             time.sleep(command_gap / 1000.0)
-            if old_on != on:
-                if on:
-                    print(options.decimals[-length:], file=decimals)
-                else:
-                    print(file=decimals)
-                message(debug, "powered " + str(on))
-                time.sleep(command_gap / 1000.0)
 
 def main():
-    run(get_options())
+    options = get_options()
+    numeric_level = getattr(logging, options.loglevel.upper(), None)
+    if not isinstance(numeric_level, int):
+        sys.exit('Invalid log level: %s' % options.loglevel)
+    logging.basicConfig(level=numeric_level)
+    logging.debug("starting")
+    run(options)
 
 if __name__ == "__main__":
     main()
