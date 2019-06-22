@@ -10,4 +10,4 @@
 Description=Show time and date on Delcom 7 segment LED display
 [Service]
 StandardOutput=journal
-ExecStart=/opt/github.com/stuart12/delcom-clock/delcom-clock --verbose --control /run/led-bedroom --chown homeassistant --decimals 10000101 --update 60 --format "%%m%%d %%k%%M" %i
+ExecStart=/opt/github.com/stuart12/delcom-clock/delcom-clock --control /run/led-bedroom --chown homeassistant --decimals 10000101 --update 60 --format "%%m%%d %%k%%M" %i
