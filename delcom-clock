@@ -20,6 +20,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/usb/misc_usbsevseg.txt
+# https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/usb/misc/usbsevseg.c
+
 import os
 import os.path
 import sys
@@ -30,6 +33,7 @@ import stat
 import math
 import logging
 import pwd
+import grp
 import syslog
 import signal
 import functools
@@ -67,6 +71,9 @@ def signal_handler(short_device, do_syslog, signal, frame):
         message(mess)
     sys.exit(1)
 
+def octal_int(x):
+    return int(x, 8)
+
 def get_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description="show the time on a Delcom Engineering USB Numeric Display")
@@ -75,6 +82,8 @@ def get_options():
     parser.add_argument("-l", "--loglevel", metavar="LEVEL", help="set logging level")
     parser.add_argument("--usbsevseg", default="/sys/bus/usb/drivers/usbsevseg", metavar="PATH", help="sys path to displays")
     parser.add_argument("--chown", default=None, metavar="USER", help="owner of control pipe")
+    parser.add_argument("--group", default=None, metavar="GROUP", help="group of control pipe")
+    parser.add_argument("--mode", type=octal_int, default=None, metavar="MODE", help="group of control pipe")
     parser.add_argument("--control", default=None, metavar="PATH", help="named pipe for control")
     parser.add_argument('-s', "--syslog", action="store_true", help="send errors to syslog")
     parser.add_argument("--decimals", default="10100", metavar="PATTERN", help="position of dots")
@@ -248,13 +257,23 @@ def run(options):
     time.sleep(command_gap / 1000.0)
 
     try:
-        if options.control != None:
+        if options.control:
             if not os.path.exists(options.control):
-                os.mkfifo(options.control, 0o600)
-                if options.chown != None:
+                os.mkfifo(options.control, 0o660)
+                gid = -1
+                uid = -1
+                if options.chown:
                     uids = pwd.getpwnam(options.chown)
-                    os.chown(options.control, uids.pw_uid, uids.pw_gid)
-                    message("chown " + options.control + " to " + str(uids.pw_uid) + ":" + str(uids.pw_gid))
+                    uid = uids.pw_uid
+                    gid = uids.pw_gid
+                if options.group:
+                    gid = grp.getgrnam(options.group).gr_gid
+                if uid != -1 or gid != -1:
+                    logging.debug("chown %s %d:%d", options.control, uid, gid)
+                    os.chown(options.control, uid, gid)
+                if options.mode:
+                    logging.debug("chmod %s %o", options.control, options.mode)
+                    os.chmod(options.control, options.mode)
             message("opening for read " + options.control)
             control_fd = os.open(options.control, os.O_RDONLY | os.O_NONBLOCK)
             if not stat.S_ISFIFO(os.fstat(control_fd)[stat.ST_MODE]):
