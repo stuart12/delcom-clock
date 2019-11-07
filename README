@@ -2,13 +2,18 @@ This is a python program to turn your seven segment
 Generation I Delcom Engineering USB Numeric Display (USB ID 0fc5:1227)
 into a clock.
 
-Author: Stuart Pook, http://www.pook.it/, January 2011
+Author: Stuart Pook, http://www.pook.it/, 2011-2019
+
+Find the names of the displays on your machine (these names can be
+directly passed to delcom-clock):
+
+    ls /sys/bus/usb/drivers/usbsevseg | grep :
 
 You can turn the clock on and off by writing 1 or 0 into a named pipe
 (see the --control option).
 
-http://www.delcomproducts.com/products_USBNDisplay.asp
-http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=blob;f=drivers/usb/misc/usbsevseg.c
+http://www.delcomproducts.com/
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/usb/misc/usbsevseg.c
 
 I would like delcom-clock to exit as soon as the device is unplugged. I
 don't know how to do this. I only seem to be able to find out that the
