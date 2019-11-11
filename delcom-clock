@@ -5,7 +5,7 @@
 # Copyright 2010, 2014, 2017 Stuart Pook http://www.pook.it/
 # https://github.com/stuart12/delcom-clock
 
-# Tested on Python and Linux 2.6.34, 2.6.37, 3.14, 4.9
+# Tested on Python and Linux 4.19 and 5.2
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -86,10 +86,9 @@ def get_options():
     parser.add_argument("--mode", type=octal_int, default=None, metavar="MODE", help="group of control pipe")
     parser.add_argument("--control", default=None, metavar="PATH", help="named pipe for control")
     parser.add_argument('-s', "--syslog", action="store_true", help="send errors to syslog")
-    parser.add_argument("--decimals", default="10100", metavar="PATTERN", help="position of dots")
     parser.add_argument("--update", type=int, metavar="SECONDS", default=1, help="delay between updates")
     parser.add_argument("--format", metavar="PATTERN", help="strftime pattern for display")
-    parser.add_argument("--pformat", default="{:2d}{:2d}{:2d}", metavar="FORMAT", help="python format pattern for display")
+    parser.add_argument("--pformat", default="{:02d}.{:02d}.{:02d}", metavar="FORMAT", help="python format pattern for display")
     parser.add_argument("--parg", metavar="TYPE:KEY", action='append', help="what value to format")
     parser.add_argument("--fork", action="store_true", help="fork")
     parser.add_argument('--off', action="store_true", help="start off")
@@ -248,7 +247,7 @@ def run(options):
             time.sleep(command_gap / 1000.0 )
             print("1" * length, file=decimals)
             time.sleep(0.75 +command_gap / 1000.0)
-            print(options.decimals[-length:], file=decimals)
+            print("1" * length, file=decimals)
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR,  "error on " + device + ": " + str(e))
         raise
