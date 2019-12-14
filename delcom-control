@@ -1,5 +1,5 @@
 #!/bin/sh
-f=/run/delcom/led-bedroom
+f=/run/delcom-clock/led-bedroom
 case "$1" in
 *off|0)
 	r=0 ;;
