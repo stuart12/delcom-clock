@@ -37,6 +37,7 @@ import grp
 import syslog
 import signal
 import functools
+import errno
 
 DIGITS = 8 # digits in the clock (compiled into kernel)
 
@@ -46,6 +47,9 @@ sys.excepthook = excepthook
 
 def myname():
     return sys.argv[0]
+
+def info(mess):
+    logging.info(mess)
 
 def message(mess):
     logging.debug(mess)
@@ -181,7 +185,7 @@ def run(options):
 
     logging.debug("device " + short_device + "\n")
 
-    message("starting " + device)
+    info("starting " + device)
 
     if do_syslog:
         syslog.openlog("delcom-clock",  0,  syslog.LOG_DAEMON)
@@ -276,7 +280,7 @@ def run(options):
         syslog.syslog(syslog.LOG_ERR, "error setting up control " + options.control + ": " + str(e))
         raise
 
-    logging.debug("starting %s every %f", options.format, options.update)
+    logging.info("starting %s every %f", options.format, options.update)
     if do_syslog:
         syslog.syslog(syslog.LOG_INFO, "%s: updating %s every %d seconds controlled by %s" % (short_device, options.format, options.update, options.control))
     on = not options.off
@@ -290,6 +294,9 @@ def run(options):
             print(dots if on else "", file=decimals)
         except OSError as ex:
             error(do_syslog, "failed to write: %s: %s" % (text_filename, ex))
+            if ex.errno == errno.ENODEV:
+                error(do_syslog, "exit(0) after ENODEV")
+                sys.exit(0)
             raise
 
         # this line is the hardest to get right
