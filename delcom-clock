@@ -109,11 +109,11 @@ def get_value(pattern, localtime, mqtt):
     if type == 'time':
         return getattr(localtime, 'tm_' + id)
     if type == 'mqtt':
-        logging.debug("mqqt value is %s (id=%s)", mqtt, id)
+        logging.debug("mqtt value is %s (id=%s)", mqtt, id)
         try:
             return mqtt[id]
         except KeyError:
-            logging.warning('no mqtt payload received for %s', id)
+            logging.warning('no mqtt payload received for %s in %s', id, mqtt)
             return 0.01
 
 def format_output(localtime, format, pformat, pargs, mqtt):
@@ -144,6 +144,22 @@ def on_message(client, userdata, message):
     logging.debug("received a message on %s %s (userdata %s)", message.topic, message.payload, userdata)
     userdata[message.topic] = float(message.payload)
 
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        logging.debug("connected to mqtt broker %s", userdata)
+    else:
+        logging.warning("failed to connect to mqtt broker %s %d", userdata, rc)
+
+def on_disconnect(client, userdata, rc):
+    logging.warning("disconnected from mqtt broker %s %d", userdata, rc)
+
+def get_password(password, password_file):
+    if password:
+        return password
+    with open(password_file) as f:
+        logging.debug("reading password from %s", password_file)
+        return f.readline().strip('\n')
+
 def mqtt_setup(mqttbroker, mqttuser, mqttclientid, mqttpassword, mqttpasswdfile, pargs):
     topics = [s[1] for u in pargs for s in (u.split(':'), ) if s[0] == 'mqtt']
     logging.debug("mqtt topics %s", topics)
@@ -151,12 +167,13 @@ def mqtt_setup(mqttbroker, mqttuser, mqttclientid, mqttpassword, mqttpasswdfile,
         return None
     import paho.mqtt.client as mqttClient
     client = mqttClient.Client(client_id=mqttclientid, userdata=mqttbroker)
-    client.username_pw_set(mqttuser, password=mqttpassword)
-    logging.debug("connecting to mqtt broker %s as %s with%s password", mqttbroker, mqttuser, "" if mqttpassword else "out")
-    client.connect(mqttbroker)
-    logging.debug("connected to mqtt broker %s as %s", mqttbroker, mqttuser)
+    client.username_pw_set(mqttuser, password=get_password(mqttpassword, mqttpasswdfile))
+    client.on_connect = on_connect
+    client.on_disconnect = on_disconnect
     return_array = {}
     client.user_data_set(return_array)
+    logging.debug("connecting to mqtt broker %s as %s with%s password", mqttbroker, mqttuser, "" if mqttpassword else "out")
+    client.connect(mqttbroker)
     for t in topics:
         client.subscribe(t)
         client.message_callback_add(t, on_message)
@@ -177,7 +194,7 @@ def run(options):
     device = os.path.join(options.usbsevseg, options.display[0])
     short_device = os.path.basename(device)
 
-    logging.debug("device " + short_device + "\n")
+    logging.debug("device " + short_device)
 
     message("starting " + device)
 
