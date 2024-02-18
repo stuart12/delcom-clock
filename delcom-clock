@@ -146,14 +146,6 @@ def split_text(now, format, pformat, pargs, mqtt):
     assert len(decimals) == len(str), "len(%s) != len(%s)" % (decimals, str)
     return str, decimals, text
 
-def on_subscribe(client, userdata, mid, reason_code_list, properties):
-    for rc in reason_code_list:
-        # https://github.com/eclipse/paho.mqtt.python?tab=readme-ov-file#client
-        if rc.is_failure:
-            logging.warning("Broker rejected your subscription: %s", rc)
-        else:
-            logging.info("Broker granted the following QoS: %s", rc.value)
-
 def on_message(client, userdata, message):
     logging.debug("received a message on %s %s (userdata %s)", message.topic, message.payload, userdata)
     userdata['data'][message.topic] = float(message.payload)
