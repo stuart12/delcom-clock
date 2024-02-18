@@ -117,7 +117,7 @@ def get_value(pattern, localtime, mqtt):
     if type == 'mqtt':
         logging.debug("mqtt value is %s (id=%s)", mqtt, id)
         try:
-            return mqtt[id]
+            return mqtt['data'][id]
         except KeyError:
             logging.warning('no mqtt payload received for %s in %s', id, mqtt)
             return 0.01
@@ -146,18 +146,29 @@ def split_text(now, format, pformat, pargs, mqtt):
     assert len(decimals) == len(str), "len(%s) != len(%s)" % (decimals, str)
     return str, decimals, text
 
+def on_subscribe(client, userdata, mid, reason_code_list, properties):
+    for rc in reason_code_list:
+        # https://github.com/eclipse/paho.mqtt.python?tab=readme-ov-file#client
+        if rc.is_failure:
+            logging.warning("Broker rejected your subscription: %s", rc)
+        else:
+            logging.info("Broker granted the following QoS: %s", rc.value)
+
 def on_message(client, userdata, message):
     logging.debug("received a message on %s %s (userdata %s)", message.topic, message.payload, userdata)
-    userdata[message.topic] = float(message.payload)
+    userdata['data'][message.topic] = float(message.payload)
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         logging.info("connected to mqtt broker %s", userdata)
+        for t in userdata['topics']:
+            client.subscribe(t)
     else:
         logging.warning("failed to connect to mqtt broker %s %d", userdata, rc)
 
 def on_disconnect(client, userdata, rc):
     logging.warning("disconnected from mqtt broker %s %d", userdata, rc)
+    userdata['data'] = {}
 
 def get_password(password, password_file):
     if password:
@@ -170,24 +181,31 @@ def mqtt_setup(mqttbroker, mqttuser, mqttclientid, mqttpassword, mqttpasswdfile,
     topics = [s[1] for u in pargs for s in (u.split(':'), ) if s[0] == 'mqtt']
     logging.debug("mqtt topics %s", topics)
     if not topics:
-        return None
+        return None, None
     import paho.mqtt.client as mqttClient
     client = mqttClient.Client(client_id=mqttclientid, userdata=mqttbroker)
     client.username_pw_set(mqttuser, password=get_password(mqttpassword, mqttpasswdfile))
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
-    return_array = {}
-    client.user_data_set(return_array)
-    logging.debug("connecting to mqtt broker %s as %s with%s password", mqttbroker, mqttuser, "" if mqttpassword else "out")
-    client.connect(mqttbroker)
-    for t in topics:
-        client.subscribe(t)
-        client.message_callback_add(t, on_message)
-    client.loop_start()
-    return return_array
+    client.on_message = on_message
+    userdata = { 'topics': topics, 'data': {} }
+    client.user_data_set(userdata)
+    logging.debug("will connect to mqtt broker %s as %s with%s password", mqttbroker, mqttuser, "" if mqttpassword else "out")
+    return client, userdata
+
+def mqttconnect(client, broker):
+    if client:
+        try:
+            client.connect(broker)
+        except ConnectionRefusedError as ex:
+            logging.warning("failed initial connection to mqtt broker %s (%s)", broker, ex)
+            return client
+        logging.info("initial connection to mqtt broker %s OK", broker)
+        client.loop_start()
+    return None
 
 def run(options):
-    mqtt = mqtt_setup(options.mqttbroker, options.mqttuser, options.mqttclientid, options.mqttpassword, options.mqttpasswdfile, options.parg)
+    mqttclient, mqtt = mqtt_setup(options.mqttbroker, options.mqttuser, options.mqttclientid, options.mqttpassword, options.mqttpasswdfile, options.parg)
     if options.only_format:
         if mqtt is not None: # hack
             time.sleep(5)
@@ -315,6 +333,9 @@ def run(options):
                 error(do_syslog, "exit(0) after ENODEV")
                 sys.exit(0)
             raise
+
+        mqttclient = mqttconnect(mqttclient, options.mqttbroker)
+        now = time.time()
 
         # this line is the hardest to get right
         delay = options.update - now % 60 % options.update
