@@ -152,7 +152,7 @@ def on_message(client, userdata, message):
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        logging.debug("connected to mqtt broker %s", userdata)
+        logging.info("connected to mqtt broker %s", userdata)
     else:
         logging.warning("failed to connect to mqtt broker %s %d", userdata, rc)
 
