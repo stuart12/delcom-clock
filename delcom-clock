@@ -115,9 +115,6 @@ def get_value(pattern, localtime, mqtt):
     if type == 'time':
         return getattr(localtime, 'tm_' + id)
     if type == 'mqtt':
-        if mqtt is None:
-            logging.info('mqtt not yet active %s', id)
-            return 0.02
         logging.debug("mqqt value is %s (id=%s)", mqtt, id)
         try:
             return mqtt[id]
@@ -162,12 +159,8 @@ def mqtt_setup(mqttbroker, mqttuser, mqttclientid, mqttpassword, mqttpasswdfile,
     client = mqttClient.Client(client_id=mqttclientid, userdata=mqttbroker)
     client.username_pw_set(mqttuser, password=mqttpassword)
     logging.debug("connecting to mqtt broker %s as %s with%s password", mqttbroker, mqttuser, "" if mqttpassword else "out")
-    try:
-        client.connect(mqttbroker)
-    except ConnectionRefusedError as ex:
-        logging.warning("failed to connect to mqtt broker %s as %s (%s)", mqttbroker, mqttuser, ex)
-        return None
-    logging.info("connected to mqtt broker %s as %s", mqttbroker, mqttuser)
+    client.connect(mqttbroker)
+    logging.debug("connected to mqtt broker %s as %s", mqttbroker, mqttuser)
     return_array = {}
     client.user_data_set(return_array)
     for t in topics:
@@ -177,6 +170,7 @@ def mqtt_setup(mqttbroker, mqttuser, mqttclientid, mqttpassword, mqttpasswdfile,
     return return_array
 
 def run(options):
+    mqtt = mqtt_setup(options.mqttbroker, options.mqttuser, options.mqttclientid, options.mqttpassword, options.mqttpasswdfile, options.parg)
     if options.only_format:
         if mqtt is not None: # hack
             time.sleep(5)
@@ -290,10 +284,7 @@ def run(options):
     if do_syslog:
         syslog.syslog(syslog.LOG_INFO, "%s: updating %s every %d seconds controlled by %s" % (short_device, options.format, options.update, options.control))
     on = not options.off
-    mqtt = None
     while True:
-        if mqtt is None:
-            mqtt = mqtt_setup(options.mqttbroker, options.mqttuser, options.mqttclientid, options.mqttpassword, options.mqttpasswdfile, options.parg)
         now = time.time()
         localtime = time.localtime(now)
         out, dots, _ = split_text(localtime, options.format, options.pformat, options.parg, mqtt)
