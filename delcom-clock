@@ -28,16 +28,13 @@ import os.path
 import sys
 import argparse
 import time
-import stat
 import json
 import logging
-import pwd
 import re
 import syslog
 import functools
 import errno
 import asyncio
-import paho.mqtt.client
 import socket
 import aiomqtt # https://github.com/empicano/aiomqtt
 
