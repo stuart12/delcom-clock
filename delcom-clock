@@ -269,7 +269,7 @@ class DelcomClock:
         self._numbers[key] = value
         logging.info("message %s/%f: numbers %s", key, value, self._numbers)
         
-    def control(self, state):
+    def control(self, state) -> None:
         if state == "on":
             self.on = True
         elif state == "off":
@@ -278,14 +278,17 @@ class DelcomClock:
             self.on = not self.on
         else:
             logging.warning("unexpected state %s when on=%s", state, self.on)
-        return self.get_status()
         
-    def get_status(self):
+    def get_status(self) -> str:
         return "on" if self.on else "off"
 
 
+def report_status(outgoing: asyncio.Queue, clock: DelcomClock):
+    outgoing.put_nowait(clock.get_status().upper())
+
+
 async def run_clock(incoming: asyncio.Queue, outgoing: asyncio.Queue, clock: DelcomClock, numbers: dict, command_topic: str):
-    outgoing.put_nowait(clock.get_status())
+    report_status(outgoing=outgoing, clock=clock)
     while True:
         delay = clock.run()
         try: # https://superfastpython.com/asyncio-queue/#Example_of_Asyncio_Queue_With_Timeout
@@ -295,9 +298,9 @@ async def run_clock(incoming: asyncio.Queue, outgoing: asyncio.Queue, clock: Del
             logging.debug("after wait_for %0.3f: %s", delay, message)
             if message[0] == command_topic:
                 new_state = message[1].decode()
-                state = clock.control(new_state.lower())
-                outgoing.put_nowait(state.upper())
-                logging.info("after state change to %s state=%s outgoing=%d", new_state, state, outgoing.qsize())
+                clock.control(new_state.lower())
+                report_status(outgoing=outgoing, clock=clock)
+                logging.info("after state change to %s state=%s outgoing=%d", new_state, clock.get_status(), outgoing.qsize())
             else:
                 key = numbers.get(message[0], None)
                 if key:
