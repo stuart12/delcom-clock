@@ -34,7 +34,6 @@ import logging
 import pwd
 import re
 import syslog
-import signal
 import functools
 import errno
 import asyncio
@@ -71,14 +70,6 @@ def set_parameter(device, parameter, value):
     f.write(value + "\n")
     f.close()
     message("set " + name + " to " + value)
-
-def signal_handler(short_device, do_syslog, signal, frame):
-    mess = "%s: exiting on signal %d" % (short_device, signal)
-    if do_syslog:
-        syslog.syslog(syslog.LOG_INFO, mess)
-    else:
-        message(mess)
-    sys.exit(1)
 
 
 def get_options():
