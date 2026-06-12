@@ -9,9 +9,6 @@ directly passed to delcom-clock):
 
     ls /sys/bus/usb/drivers/usbsevseg | grep :
 
-You can turn the clock on and off by writing 1 or 0 into a named pipe
-(see the --control option).
-
 http://www.delcomproducts.com/
 https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/usb/misc/usbsevseg.c
 
