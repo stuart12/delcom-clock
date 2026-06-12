@@ -73,6 +73,7 @@ def get_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description="show the time on a Delcom Engineering USB Numeric Display")
     parser.set_defaults(loglevel='warn')
+    parser.set_defaults(number=[])
     parser.add_argument("-v", "--verbose", dest='loglevel', action="store_const", const='debug', help="debug loglevel")
     parser.add_argument("-l", "--loglevel", metavar="LEVEL", help="set logging level")
     parser.add_argument("--usbsevseg", default="/sys/bus/usb/drivers/usbsevseg", metavar="PATH", help="sys path to displays")
