@@ -185,7 +185,7 @@ class DelcomClock:
                 power.close()
                 magic_delay = 5.0
                 message("sleeping " + str(magic_delay))
-                time.sleep(magic_delay)
+                await asyncio.sleep(magic_delay)
                 message("slept " + str(magic_delay))
 
             set_parameter(device, "powered", "1")
@@ -201,18 +201,18 @@ class DelcomClock:
             raise
 
         self.command_gap = 25 / 1000.0
-        time.sleep(self.command_gap)
+        await asyncio.sleep(self.command_gap)
 
         try:
             if options.off:
                 print("1" + "0" * (DIGITS - 1), file=self.decimals)
-                time.sleep(0.75 + self.command_gap)
+                await asyncio.sleep(0.75 + self.command_gap)
                 print("0" * DIGITS, file=decimals)
             else:
                 print("8" * DIGITS, file=self.text)
-                time.sleep(self.command_gap)
+                await asyncio.sleep(self.command_gap)
                 print("1" * DIGITS, file=self.decimals)
-                time.sleep(0.75 + self.command_gap)
+                await asyncio.sleep(0.75 + self.command_gap)
                 print("1" * DIGITS, file=self.decimals)
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR,  "error on " + device + ": " + str(e))
