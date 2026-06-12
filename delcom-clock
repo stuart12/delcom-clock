@@ -207,7 +207,7 @@ class DelcomClock:
             if options.off:
                 print("1" + "0" * (DIGITS - 1), file=self.decimals)
                 await asyncio.sleep(0.75 + self.command_gap)
-                print("0" * DIGITS, file=decimals)
+                print("0" * DIGITS, file=self.decimals)
             else:
                 print("8" * DIGITS, file=self.text)
                 await asyncio.sleep(self.command_gap)
