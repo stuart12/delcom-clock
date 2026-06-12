@@ -329,7 +329,7 @@ async def publisher(client: aiomqtt.Client, topic:str, outgoing: asyncio.Queue):
     while True:
         status = await outgoing.get()
         logging.debug("retrieved a status to send %s, %d remaining", status, outgoing.qsize())
-        await client.publish(topic, status)
+        await client.publish(topic=topic, payload=status, retain=True)
         outgoing.task_done()
     logging.error("end of publisher")
 
