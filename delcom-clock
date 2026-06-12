@@ -403,7 +403,7 @@ async def send_mqtt_configuration(client: aiomqtt.Client, make_topics: MakeTopic
         "qos": 2,
     }
     await client.publish(discovery_topic, json.dumps(payload), retain=True)
-    await client.publish(make_topics.availability(), "online")
+    await client.publish(make_topics.availability(), "online", retain=True)
 
 
 async def mqtt(topics:list, incoming: asyncio.Queue, outgoing: asyncio.Queue,
@@ -412,7 +412,7 @@ async def mqtt(topics:list, incoming: asyncio.Queue, outgoing: asyncio.Queue,
         reconnect_delay: float,
     ):
     logging.info("aiomqtt.Client(hostname=%s, username=%s, password=password, identifier=%s)", broker, user, clientid)
-    will = aiomqtt.Will(topic=make_topics.availability(), payload="offline", qos=2, retain=False) # https://github.com/empicano/aiomqtt/issues/28
+    will = aiomqtt.Will(topic=make_topics.availability(), payload="offline", qos=2, retain=True) # https://github.com/empicano/aiomqtt/issues/28
     client = aiomqtt.Client(hostname=broker, username=user, password=password, identifier=clientid, will=will)
     while True:
         try: # https://aiomqtt.bo3hm.com/subscribing-to-a-topic.html
