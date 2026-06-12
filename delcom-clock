@@ -84,7 +84,7 @@ def get_options():
     parser.add_argument("--number", metavar="TOPIC:KEY", action='append', help="mqtt topic and key")
     parser.add_argument('--off', action="store_true", help="start off")
     parser.add_argument('-n', '--only_format', action="store_true", help="just format the output string")
-    parser.add_argument("--mqttbroker", default="localhost", help="mqtt broker")
+    parser.add_argument("--mqttbroker", help="mqtt broker")
     parser.add_argument("--id", default="delcom-clock", help="tag for mqtt broker and topics")
     parser.add_argument("--mqttuser", help="mqtt password")
     parser.add_argument("--mqttpassword", help="mqtt password")
@@ -132,6 +132,8 @@ def split_text(now, pformat, numbers: dict):
 def get_password(password, password_file):
     if password:
         return password
+    if not password_file:
+        return None
     with open(password_file) as f:
         logging.debug("reading password from %s", password_file)
         return f.readline().strip('\n')
@@ -440,20 +442,20 @@ async def main():
     hostname = socket.gethostname()
     make_topics = MakeTopic(options.id, device=device, hostname=hostname)
 
-    clientid = make_mqtt_clientid(hostname=hostname, device=device)
-    password = get_password(options.mqttpassword, options.mqttpasswordfile)
-
     incoming = asyncio.Queue()
     outgoing = asyncio.Queue()
     
     async with asyncio.TaskGroup() as tg: # https://aiomqtt.bo3hm.com/subscribing-to-a-topic.html
-        tg.create_task(mqtt(topics=numbers.keys(),
-            incoming=incoming,
-            outgoing=outgoing,
-            broker=options.mqttbroker, user=options.mqttuser, password=password, clientid=clientid,
-            make_topics=make_topics,
-            reconnect_delay=options.reconnect,
-        ))
+        if options.mqttbroker:
+            tg.create_task(mqtt(topics=numbers.keys(),
+                incoming=incoming,
+                outgoing=outgoing,
+                broker=options.mqttbroker, user=options.mqttuser,
+                password=get_password(options.mqttpassword, options.mqttpasswordfile),
+                clientid=make_mqtt_clientid(hostname=hostname, device=device),
+                make_topics=make_topics,
+                reconnect_delay=options.reconnect,
+            ))
         tg.create_task(run_clock(incoming=incoming, outgoing=outgoing, clock=clock, numbers=numbers, command_topic=make_topics.command()))
 
 
